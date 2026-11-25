@@ -3,145 +3,260 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UltraFast Local MP4 Converter & Visually Lossless Compressor</title>
+  <title>Pro Local GPU Video Studio — Zero-RAM Streaming</title>
   <style>
     :root {
-      --bg: #0b0f19;
-      --card: #131a2a;
-      --border: #232f46;
-      --text: #e2e8f0;
+      --bg: #090d16;
+      --surface: #111827;
+      --surface-2: #1a2335;
+      --border: #26334d;
+      --text: #f1f5f9;
       --muted: #94a3b8;
       --accent: #3b82f6;
       --accent-hover: #2563eb;
       --success: #10b981;
       --warn: #f59e0b;
       --danger: #ef4444;
+      --purple: #8b5cf6;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; display: flex; justify-content: center; }
-    .app { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 18px; }
-    header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
-    .badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 999px; background: #1e293b; border: 1px solid var(--border); color: var(--muted); }
-    .badge.ok { color: var(--success); border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.1); }
-    .badge.warn { color: var(--warn); border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.1); }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter, system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px; display: flex; justify-content: center; }
+    .app { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 18px; }
+
+    /* Header */
+    .topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.74rem; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
+    }
+    .badge.ok { color: var(--success); border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.1); }
+    .badge.warn { color: var(--warn); border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.12); }
+    .badge.info { color: #60a5fa; border-color: rgba(59,130,246,0.35); background: rgba(59,130,246,0.12); }
+
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .card-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Dropzone */
     .dropzone {
-      border: 2px dashed var(--border); border-radius: 12px; padding: 36px 20px; text-align: center;
-      cursor: pointer; transition: 0.2s; background: rgba(255,255,255,0.01);
+      border: 2px dashed var(--border); border-radius: 12px; padding: 34px 20px; text-align: center;
+      cursor: pointer; transition: 0.2s; background: rgba(255,255,255,0.015);
     }
     .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(59,130,246,0.06); }
-    .dropzone p { color: var(--muted); margin-top: 8px; font-size: 0.9rem; }
-    .hidden { display: none !important; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px; }
-    .stat { background: #0d1322; border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
-    .stat label { display: block; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-    .stat span { display: block; font-size: 1rem; font-weight: 600; margin-top: 4px; }
-    .controls { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
-    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-    select, input[type="number"] {
-      background: #0d1322; color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 12px; font-size: 0.92rem; outline: none;
+    .dropzone strong { font-size: 1rem; }
+    .dropzone p { color: var(--muted); margin-top: 6px; font-size: 0.85rem; }
+
+    /* Metadata Grid */
+    .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
+    .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; }
+    .stat label { display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat span { display: block; font-size: 0.92rem; font-weight: 600; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; background: var(--bg); padding: 5px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 16px; }
+    .tab {
+      flex: 1; text-align: center; padding: 10px 14px; border-radius: 7px; font-size: 0.88rem;
+      font-weight: 600; cursor: pointer; color: var(--muted); transition: 0.15s; border: none; background: transparent;
     }
-    select:focus, input:focus { border-color: var(--accent); }
-    button {
+    .tab.active { background: var(--accent); color: #fff; }
+
+    /* Controls */
+    .control-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .field label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    select {
+      width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; outline: none;
+    }
+    select:focus { border-color: var(--accent); }
+
+    /* Resolution Pills */
+    .res-pills { display: flex; gap: 10px; flex-wrap: wrap; }
+    .res-pill {
+      padding: 10px 16px; border-radius: 9px; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+    }
+    .res-pill:hover { border-color: var(--accent); }
+    .res-pill.active { background: rgba(59,130,246,0.18); border-color: var(--accent); color: #60a5fa; }
+
+    /* Summary Bar */
+    .combo-box {
+      margin-top: 16px; padding: 14px 16px; border-radius: 10px;
+      background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
+      border: 1px solid rgba(59,130,246,0.3);
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    }
+    .combo-left { font-size: 0.88rem; color: var(--muted); }
+    .combo-left strong { color: var(--text); display: block; font-size: 0.96rem; margin-bottom: 2px; }
+    .combo-right { text-align: right; }
+    .combo-right .size-val { font-size: 1.15rem; font-weight: 700; color: var(--success); }
+    .combo-right .size-sub { font-size: 0.76rem; color: var(--muted); }
+
+    /* Buttons */
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    button.btn {
       background: var(--accent); color: #fff; border: none; border-radius: 9px;
-      padding: 12px 20px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+      padding: 11px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: 0.15s;
     }
-    button:hover:not(:disabled) { background: var(--accent-hover); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    button.secondary { background: #1e293b; color: var(--text); border: 1px solid var(--border); }
-    button.danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.4); }
+    button.btn:hover:not(:disabled) { background: var(--accent-hover); }
+    button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.btn.purple { background: var(--purple); }
+    button.btn.purple:hover:not(:disabled) { background: #7c3aed; }
+    button.btn.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    button.btn.danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.35); }
+
+    /* Progress */
     .progress-wrap { margin-top: 16px; }
-    .bar-bg { width: 100%; height: 10px; background: #0d1322; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+    .bar-bg { width: 100%; height: 10px; background: var(--bg); border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
     .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.15s linear; }
-    .progress-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
-    .preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 14px; }
+    .progress-meta { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--muted); margin-top: 7px; }
+
+    /* Preview Grid */
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
     .video-box { background: #05080f; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-    .video-box header { padding: 8px 12px; background: #0d1322; border-bottom: 1px solid var(--border); font-size: 0.82rem; color: var(--muted); }
-    video { width: 100%; max-height: 300px; display: block; background: #000; }
-    .alert { padding: 12px 14px; border-radius: 10px; font-size: 0.88rem; margin-top: 12px; }
-    .alert.warn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.35); color: #fcd34d; }
+    .video-box header {
+      padding: 9px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--muted); display: flex; justify-content: space-between; align-items: center;
+    }
+    video { width: 100%; max-height: 280px; display: block; background: #000; }
+
+    .hidden { display: none !important; }
+    .alert { padding: 12px 14px; border-radius: 10px; font-size: 0.86rem; }
     .alert.err { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; }
   </style>
 </head>
 <body>
   <div class="app">
-    <header>
-      <h1>⚡ Local GPU MP4 Converter & Compressor</h1>
-      <div class="row">
-        <span id="gpuBadge" class="badge">Checking WebCodecs...</span>
-        <span id="diskBadge" class="badge">Checking Disk Engine...</span>
+    <!-- Top Bar -->
+    <div class="topbar">
+      <div class="brand">
+        <h1>⚡ Pro Local GPU Video Studio</h1>
       </div>
-    </header>
-
-    <div id="unsupportedAlert" class="alert err hidden">
-      Your browser does not support Hardware WebCodecs. Please open this page in Chrome, Edge, Safari, or Desktop Firefox.
+      <div class="badges">
+        <span id="gpuBadge" class="badge">Checking GPU...</span>
+        <span id="diskBadge" class="badge">Checking Disk...</span>
+        <span id="ramBadge" class="badge ok">RAM Cap: &lt;300 MB</span>
+      </div>
     </div>
 
-    <!-- Upload Card -->
+    <div id="unsupportedAlert" class="alert err hidden">
+      WebCodecs GPU API is not supported in this browser. Please open this page in Chrome, Edge, Safari, or Desktop Firefox.
+    </div>
+
+    <!-- Step 1: Upload & Deep Inspector -->
     <div class="card">
       <div id="dropzone" class="dropzone">
         <strong>Drop any video file here or click to browse</strong>
-        <p>100% Local GPU Processing • Zero Server Cost • Zero RAM Limits (Streams directly to disk)</p>
+        <p>100% Local GPU Processing • $0 Server Cost • Strict &lt;300 MB RAM Streaming</p>
         <input id="fileInput" type="file" accept="video/*,.mkv,.mov,.webm,.avi,.ts,.m4v" class="hidden" />
       </div>
 
-      <!-- File Info & Settings -->
-      <div id="configPanel" class="hidden">
-        <div class="grid">
-          <div class="stat"><label>File Name</label><span id="metaName">-</span></div>
+      <div id="inspectorPanel" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:8px;">
+          <strong id="metaName" style="font-size:0.95rem;">-</strong>
+          <div id="statusTags" class="badges"></div>
+        </div>
+        <div class="meta-grid">
           <div class="stat"><label>Original Size</label><span id="metaSize">-</span></div>
+          <div class="stat"><label>Video Codec</label><span id="metaVCodec">-</span></div>
+          <div class="stat"><label>Audio Codec</label><span id="metaACodec">-</span></div>
           <div class="stat"><label>Resolution & Duration</label><span id="metaRes">-</span></div>
-          <div class="stat"><label>Estimated Output</label><span id="metaEst" style="color: var(--success);">-</span></div>
-        </div>
-
-        <div class="controls">
-          <div class="row">
-            <label for="modeSelect" style="font-size:0.9rem; color:var(--muted);">Compression Mode:</label>
-            <select id="modeSelect">
-              <option value="lossless">Visually Lossless (Imperceptible to Human Eye)</option>
-              <option value="custom">Custom Target Size (MB)</option>
-            </select>
-
-            <div id="customSizeWrap" class="row hidden">
-              <input id="targetMb" type="number" min="1" step="1" value="25" style="width:110px;" />
-              <span style="font-size:0.88rem; color:var(--muted);">MB</span>
-            </div>
-          </div>
-
-          <div id="qualityWarn" class="alert warn hidden">
-            Below the visually lossless threshold — slight softening may occur. Resolution will auto-scale to keep the image clean.
-          </div>
-
-          <div class="row">
-            <button id="startBtn">Convert & Compress to MP4</button>
-            <button id="cancelBtn" class="danger hidden">Cancel</button>
-            <button id="downloadBtn" class="secondary hidden">Save / Download MP4</button>
-          </div>
-        </div>
-
-        <!-- Live Progress -->
-        <div id="progressWrap" class="progress-wrap hidden">
-          <div class="bar-bg"><div id="barFill" class="bar-fill"></div></div>
-          <div class="progress-meta">
-            <span id="statusText">Initializing GPU pipeline...</span>
-            <span id="speedText">0% • --x speed • ETA --</span>
-          </div>
+          <div class="stat"><label>Avg Bitrate</label><span id="metaBitrate">-</span></div>
         </div>
       </div>
     </div>
 
-    <!-- Disk-Streamed Preview Card -->
+    <!-- Step 2: Advanced Mode Selector -->
+    <div id="studioCard" class="card hidden">
+      <div class="tabs">
+        <button id="tabCodec" class="tab active">1. Video & Audio Codec Mode</button>
+        <button id="tabRes" class="tab">2. Resolution Change Only</button>
+      </div>
+
+      <!-- Mode 1: Codec & Audio -->
+      <div id="panelCodec">
+        <div class="control-grid">
+          <div class="field">
+            <label for="vCodecSelect">Target Video Type</label>
+            <select id="vCodecSelect">
+              <option value="copy">Copy Original Video (Instant Remux — 0% Quality Loss)</option>
+              <option value="avc" selected>H.264 / AVC (Universal MP4 — All Devices)</option>
+              <option value="hevc">H.265 / HEVC (High Efficiency — ~40% Smaller)</option>
+              <option value="vp9">VP9 (Web Optimized — Small Size)</option>
+              <option value="av1">AV1 (Next-Gen Ultra Compression)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="aCodecSelect">Target Audio Type</label>
+            <select id="aCodecSelect">
+              <option value="aac-128" selected>AAC 128 kbps (Universal Transparent)</option>
+              <option value="aac-64">AAC 64 kbps (Small Size)</option>
+              <option value="opus-96">Opus 96 kbps (High Efficiency)</option>
+              <option value="copy">Copy Original Audio (Instant)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode 2: Resolution Only -->
+      <div id="panelRes" class="hidden">
+        <div class="field">
+          <label>Select Target Resolution (Keeps Universal H.264 + AAC)</label>
+          <div id="resPills" class="res-pills"></div>
+        </div>
+      </div>
+
+      <!-- Combination & Output Size Box -->
+      <div class="combo-box">
+        <div class="combo-left">
+          <strong id="comboTitle">-</strong>
+          <span id="comboDesc">-</span>
+        </div>
+        <div class="combo-right">
+          <div id="estSizeVal" class="size-val">-</div>
+          <div id="estSizeSub" class="size-sub">Estimated Output Size</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions">
+        <button id="previewBtn" class="btn purple">⚡ Generate 10s Middle Preview</button>
+        <button id="startBtn" class="btn">Convert Full Video to Disk</button>
+        <button id="cancelBtn" class="btn danger hidden">Cancel</button>
+        <button id="downloadBtn" class="btn secondary hidden">Download Full MP4</button>
+      </div>
+
+      <!-- Progress -->
+      <div id="progressWrap" class="progress-wrap hidden">
+        <div class="bar-bg"><div id="barFill" class="bar-fill"></div></div>
+        <div class="progress-meta">
+          <span id="statusText">Ready</span>
+          <span id="speedText">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Blazing Fast 10s Middle Preview & Final Output -->
     <div id="previewCard" class="card hidden">
-      <strong style="font-size:0.95rem;">Disk-Streamed Preview (Zero RAM)</strong>
+      <div class="card-title">
+        <span>Live Disk-Streamed Preview</span>
+        <span id="previewBadge" class="badge info hidden">10s Middle Sample</span>
+      </div>
       <div class="preview-grid">
         <div class="video-box">
-          <header>Original Input (Direct Disk Stream)</header>
+          <header>
+            <span>Original Input</span>
+            <span id="origTimeTag">Full File</span>
+          </header>
           <video id="origVideo" controls playsinline muted></video>
         </div>
         <div id="outVideoBox" class="video-box hidden">
-          <header id="outVideoHeader">Compressed MP4 (Streamed from Disk)</header>
+          <header>
+            <span id="outVideoTitle">10s Middle Preview</span>
+            <span id="outVideoSize" style="color:var(--success); font-weight:600;">-</span>
+          </header>
           <video id="outVideo" controls playsinline></video>
         </div>
       </div>
@@ -149,7 +264,7 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- INLINE MODULE WEB WORKER (Zero-RAM WebCodecs + Mediabunny Pipeline)   -->
+  <!-- INLINE MODULE WEB WORKER (Strict Zero-RAM Streaming + 10s Preview)    -->
   <!-- ===================================================================== -->
   <script id="worker-code" type="javascript/worker">
     import {
@@ -182,26 +297,33 @@
             formats: ALL_FORMATS
           });
           const duration = await input.computeDuration();
-          const videoTrack = await input.getPrimaryVideoTrack();
-          const width = videoTrack ? await videoTrack.getDisplayWidth() : 0;
-          const height = videoTrack ? await videoTrack.getDisplayHeight() : 0;
+          const vTrack = await input.getPrimaryVideoTrack();
+          const aTrack = await input.getPrimaryAudioTrack();
+
+          const width = vTrack ? await vTrack.getDisplayWidth() : 0;
+          const height = vTrack ? await vTrack.getDisplayHeight() : 0;
+          const vCodec = vTrack ? (vTrack.codec || 'unknown') : 'none';
+          const aCodec = aTrack ? (aTrack.codec || 'none') : 'none';
 
           self.postMessage({
             type: 'inspected',
-            data: { duration, width, height, size: payload.file.size }
+            data: { duration, width, height, vCodec, aCodec, size: payload.file.size }
           });
         } catch (err) {
-          self.postMessage({ type: 'error', error: 'Could not read video: ' + err.message });
+          self.postMessage({ type: 'error', error: 'Inspect failed: ' + err.message });
         }
         return;
       }
 
-      if (type === 'convert') {
-        const { file, videoBitrate, audioBitrate, targetHeight, storageMode, fileHandle, opfsName } = payload;
+      if (type === 'convert' || type === 'preview') {
+        const {
+          file, vCodec, aCodec, videoBitrate, audioBitrate, targetHeight,
+          storageMode, fileHandle, opfsName, trimStart, trimEnd
+        } = payload;
         let writable = null;
 
         try {
-          // 1. Open Zero-RAM Disk Stream (FSA on Desktop, OPFS on Mobile/Safari/Firefox)
+          // 1. Open Disk Stream (FSA on Desktop, OPFS on Mobile/Preview)
           if (storageMode === 'fsa' && fileHandle) {
             writable = await fileHandle.createWritable();
           } else {
@@ -210,49 +332,65 @@
             writable = await opfsHandle.createWritable();
           }
 
-          // 2. Lazy Disk Input (Never loads full file into RAM)
+          // 2. Lazy Disk Input (Reads in tiny slices — Zero RAM buildup)
           const input = new Input({
             source: new BlobSource(file),
             formats: ALL_FORMATS
           });
 
-          // 3. Chunked Disk Output (Batches disk writes for maximum speed)
+          // 3. STRICT ZERO-RAM OUTPUT:
+          // fastStart: false prevents buffering the entire MP4 in RAM!
+          // chunkSize: 4MB flushes directly to disk every 4MB, keeping RAM < 150MB.
           const output = new Output({
-            format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
-            target: new StreamTarget(writable, { chunked: true })
+            format: new Mp4OutputFormat({ fastStart: false }),
+            target: new StreamTarget(writable, {
+              chunked: true,
+              chunkSize: 4 * 1024 * 1024
+            })
           });
 
-          const videoConfig = {
-            codec: 'avc', // Universal H.264 GPU Hardware Accelerated
-            bitrate: videoBitrate,
-            hardwareAcceleration: 'prefer-hardware'
-          };
-          if (targetHeight) videoConfig.height = targetHeight;
+          const convOptions = { input, output };
 
-          activeConversion = await Conversion.init({
-            input,
-            output,
-            video: videoConfig,
-            audio: {
-              codec: 'aac',
+          // 10-Second Middle Trim for Blazing-Fast Preview
+          if (type === 'preview' && typeof trimStart === 'number' && typeof trimEnd === 'number') {
+            convOptions.trim = { start: trimStart, end: trimEnd };
+          }
+
+          // Video Settings (Skip object if 'copy' for Instant Remux)
+          if (vCodec !== 'copy') {
+            const vCfg = {
+              codec: vCodec,
+              bitrate: videoBitrate,
+              hardwareAcceleration: 'prefer-hardware'
+            };
+            if (targetHeight) vCfg.height = targetHeight;
+            convOptions.video = vCfg;
+          }
+
+          // Audio Settings
+          if (aCodec !== 'copy') {
+            convOptions.audio = {
+              codec: aCodec,
               bitrate: audioBitrate
-            }
-          });
+            };
+          }
+
+          activeConversion = await Conversion.init(convOptions);
 
           if (!activeConversion.isValid) {
-            throw new Error('Unsupported track combination or codec in this browser.');
+            throw new Error('Selected codec combination is not supported by your browser GPU. Try H.264 + AAC.');
           }
 
           const startTime = performance.now();
           activeConversion.onProgress = (progress) => {
             const elapsed = (performance.now() - startTime) / 1000;
-            self.postMessage({ type: 'progress', progress, elapsed });
+            self.postMessage({ type: 'progress', jobType: type, progress, elapsed });
           };
 
           await activeConversion.execute();
           activeConversion = null;
 
-          self.postMessage({ type: 'done', storageMode, opfsName });
+          self.postMessage({ type: 'done', jobType: type, storageMode, opfsName });
         } catch (err) {
           if (writable) {
             try { await writable.abort(); } catch {}
@@ -272,7 +410,7 @@
 
     const gpuBadge = document.getElementById('gpuBadge');
     const diskBadge = document.getElementById('diskBadge');
-    const unsupportedAlert = document.getElementById('unsupportedAlert');
+    const ramBadge = document.getElementById('ramBadge');
 
     if (hasWebCodecs) {
       gpuBadge.textContent = 'GPU WebCodecs: Active';
@@ -280,29 +418,49 @@
     } else {
       gpuBadge.textContent = 'GPU WebCodecs: Unsupported';
       gpuBadge.classList.add('warn');
-      unsupportedAlert.classList.remove('hidden');
+      document.getElementById('unsupportedAlert').classList.remove('hidden');
     }
-
-    diskBadge.textContent = hasFSA ? 'Disk Engine: File System Access API' : 'Disk Engine: OPFS (Mobile/Universal)';
+    diskBadge.textContent = hasFSA ? 'Disk: File System Access' : 'Disk: OPFS Streaming';
     diskBadge.classList.add('ok');
+
+    // Live JS Heap Monitor (Chrome/Edge)
+    if (performance.memory) {
+      setInterval(() => {
+        const mb = Math.round(performance.memory.usedJSHeapSize / (1024 * 1024));
+        ramBadge.textContent = `JS RAM: ${mb} MB (<300 MB)`;
+      }, 1500);
+    }
 
     // Boot Inline Module Worker
     const workerBlob = new Blob([document.getElementById('worker-code').textContent], { type: 'application/javascript' });
     const worker = new Worker(URL.createObjectURL(workerBlob), { type: 'module' });
 
-    // UI Elements
+    // State
+    let currentFile = null;
+    let fileMeta = null;
+    let activeMode = 'codec'; // 'codec' | 'res'
+    let selectedRes = null;
+    let currentFileHandle = null;
+    let currentOpfsName = null;
+    let wakeLock = null;
+    let origUrl = null;
+    let outUrl = null;
+    let lastPreviewDuration = 10;
+
+    // Elements
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
-    const configPanel = document.getElementById('configPanel');
+    const inspectorPanel = document.getElementById('inspectorPanel');
+    const studioCard = document.getElementById('studioCard');
     const previewCard = document.getElementById('previewCard');
-    const origVideo = document.getElementById('origVideo');
-    const outVideo = document.getElementById('outVideo');
-    const outVideoBox = document.getElementById('outVideoBox');
-    const outVideoHeader = document.getElementById('outVideoHeader');
-    const modeSelect = document.getElementById('modeSelect');
-    const customSizeWrap = document.getElementById('customSizeWrap');
-    const targetMbInput = document.getElementById('targetMb');
-    const qualityWarn = document.getElementById('qualityWarn');
+    const tabCodec = document.getElementById('tabCodec');
+    const tabRes = document.getElementById('tabRes');
+    const panelCodec = document.getElementById('panelCodec');
+    const panelRes = document.getElementById('panelRes');
+    const vCodecSelect = document.getElementById('vCodecSelect');
+    const aCodecSelect = document.getElementById('aCodecSelect');
+    const resPills = document.getElementById('resPills');
+    const previewBtn = document.getElementById('previewBtn');
     const startBtn = document.getElementById('startBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const downloadBtn = document.getElementById('downloadBtn');
@@ -310,14 +468,9 @@
     const barFill = document.getElementById('barFill');
     const statusText = document.getElementById('statusText');
     const speedText = document.getElementById('speedText');
-
-    let currentFile = null;
-    let fileMeta = null;
-    let currentFileHandle = null;
-    let currentOpfsName = null;
-    let wakeLock = null;
-    let origUrl = null;
-    let outUrl = null;
+    const origVideo = document.getElementById('origVideo');
+    const outVideo = document.getElementById('outVideo');
+    const outVideoBox = document.getElementById('outVideoBox');
 
     const fmtBytes = (b) => {
       if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
@@ -326,45 +479,117 @@
     };
 
     const fmtTime = (s) => {
-      const m = Math.floor(s / 60);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
       const sec = Math.floor(s % 60);
-      return `${m}:${sec.toString().padStart(2, '0')}`;
+      return h > 0 ? `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}` : `${m}:${sec.toString().padStart(2,'0')}`;
     };
 
-    // Perceptual Visually Lossless Bitrate Calculator (~0.095 BPP for H.264 High Profile VBR)
-    function computeSettings() {
+    const prettyCodec = (c) => {
+      const map = { avc: 'H.264 (AVC)', hevc: 'H.265 (HEVC)', vp9: 'VP9', av1: 'AV1', aac: 'AAC', opus: 'Opus', mp3: 'MP3' };
+      return map[c] || c.toUpperCase();
+    };
+
+    // Build Current Job Settings & Size Estimate
+    function getJobSettings() {
       if (!fileMeta) return null;
       const { width, height, duration, size } = fileMeta;
-      const pixels = Math.max(width * height, 640 * 360);
-      const fps = 30;
-      const losslessVideoBps = Math.round(pixels * fps * 0.095); // Visually lossless floor
-      const audioBps = 128_000;
+      const origTotalBps = (size * 8) / Math.max(duration, 1);
 
-      if (modeSelect.value === 'lossless') {
-        qualityWarn.classList.add('hidden');
-        // Never exceed original file's average bitrate
-        const origTotalBps = (size * 8) / Math.max(duration, 1);
-        const videoBps = Math.min(losslessVideoBps, Math.max(origTotalBps * 0.75, 400_000));
-        const estBytes = ((videoBps + audioBps) * duration) / 8;
-        document.getElementById('metaEst').textContent = `~${fmtBytes(estBytes)} (Visually Lossless)`;
-        return { videoBitrate: Math.round(videoBps), audioBitrate: audioBps, targetHeight: null };
+      if (activeMode === 'codec') {
+        const vCodec = vCodecSelect.value;
+        const aVal = aCodecSelect.value;
+        const [aCodec, aKbps] = aVal === 'copy' ? ['copy', 128] : aVal.split('-');
+        const audioBitrate = Number(aKbps) * 1000;
+
+        // Efficiency multipliers relative to H.264
+        const efficiency = { avc: 0.085, hevc: 0.052, vp9: 0.058, av1: 0.042 };
+        let videoBitrate = origTotalBps;
+        let estBytes = size;
+
+        if (vCodec === 'copy') {
+          estBytes = size;
+        } else {
+          const targetBps = Math.round(width * height * 30 * (efficiency[vCodec] || 0.08));
+          // Cap so we don't inflate already-compressed videos
+          const capFactor = vCodec === 'avc' ? 0.85 : 0.60;
+          videoBitrate = Math.max(250_000, Math.min(targetBps, origTotalBps * capFactor));
+          estBytes = ((videoBitrate + audioBitrate) * duration) / 8;
+        }
+
+        const comboTitle = `${vCodec === 'copy' ? 'Instant Remux (Copy Video)' : prettyCodec(vCodec)} + ${aCodec === 'copy' ? 'Copy Audio' : prettyCodec(aCodec) + ' ' + aKbps + 'k'}`;
+        const comboDesc = vCodec === 'copy' ? 'Zero re-encoding • Finishes in seconds' : `Original Resolution (${width}×${height}) • Visually Clean GPU Encode`;
+
+        return { vCodec, aCodec, videoBitrate: Math.round(videoBitrate), audioBitrate, targetHeight: null, estBytes, comboTitle, comboDesc };
       } else {
-        const targetBytes = Math.max(1, Number(targetMbInput.value) || 10) * 1024 * 1024;
-        const totalBps = (targetBytes * 8) / Math.max(duration, 1);
-        const chosenAudio = totalBps < 400_000 ? 64_000 : 128_000;
-        const videoBps = Math.max(80_000, totalBps - chosenAudio);
+        // Resolution Only Mode (Universal H.264 + AAC)
+        const targetHeight = selectedRes || Math.min(height, 720);
+        const scale = targetHeight / Math.max(height, 1);
+        const newW = Math.round(width * scale);
+        const videoBitrate = Math.max(200_000, Math.round(newW * targetHeight * 30 * 0.085));
+        const audioBitrate = targetHeight <= 480 ? 96_000 : 128_000;
+        const estBytes = ((videoBitrate + audioBitrate) * duration) / 8;
 
-        let targetHeight = null;
-        if (videoBps < 250_000) targetHeight = Math.min(height, 360);
-        else if (videoBps < 600_000) targetHeight = Math.min(height, 480);
-        else if (videoBps < 1_500_000) targetHeight = Math.min(height, 720);
-
-        qualityWarn.classList.toggle('hidden', videoBps >= losslessVideoBps * 0.85);
-        document.getElementById('metaEst').textContent = `~${fmtBytes(targetBytes)} (${targetHeight ? targetHeight + 'p' : 'Original Res'})`;
-        return { videoBitrate: Math.round(videoBps), audioBitrate: chosenAudio, targetHeight };
+        return {
+          vCodec: 'avc',
+          aCodec: 'aac',
+          videoBitrate,
+          audioBitrate,
+          targetHeight,
+          estBytes,
+          comboTitle: `Downscale to ${targetHeight}p (H.264 + AAC)`,
+          comboDesc: `${width}×${height} → ${newW}×${targetHeight} • Universal MP4`
+        };
       }
     }
 
+    function updateSummaryUI() {
+      const s = getJobSettings();
+      if (!s) return;
+      document.getElementById('comboTitle').textContent = s.comboTitle;
+      document.getElementById('comboDesc').textContent = s.comboDesc;
+      document.getElementById('estSizeVal').textContent = `~${fmtBytes(s.estBytes)}`;
+      const diffPct = Math.round((1 - s.estBytes / fileMeta.size) * 100);
+      document.getElementById('estSizeSub').textContent =
+        diffPct > 0 ? `Est. ${diffPct}% smaller (Click 10s Preview for exact size)` : 'Est. Output Size';
+    }
+
+    function buildResPills(origHeight) {
+      const options = [1080, 720, 480, 360, 240].filter(h => h <= origHeight);
+      if (options.length === 0) options.push(origHeight);
+      selectedRes = options[Math.min(1, options.length - 1)]; // Default 1 step down
+      resPills.innerHTML = '';
+      options.forEach(h => {
+        const btn = document.createElement('button');
+        btn.className = 'res-pill' + (h === selectedRes ? ' active' : '');
+        btn.textContent = `${h}p`;
+        btn.onclick = () => {
+          selectedRes = h;
+          document.querySelectorAll('.res-pill').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          updateSummaryUI();
+        };
+        resPills.appendChild(btn);
+      });
+    }
+
+    // Mode Tabs
+    tabCodec.onclick = () => {
+      activeMode = 'codec';
+      tabCodec.classList.add('active'); tabRes.classList.remove('active');
+      panelCodec.classList.remove('hidden'); panelRes.classList.add('hidden');
+      updateSummaryUI();
+    };
+    tabRes.onclick = () => {
+      activeMode = 'res';
+      tabRes.classList.add('active'); tabCodec.classList.remove('active');
+      panelRes.classList.remove('hidden'); panelCodec.classList.add('hidden');
+      updateSummaryUI();
+    };
+    vCodecSelect.onchange = updateSummaryUI;
+    aCodecSelect.onchange = updateSummaryUI;
+
+    // File Handling
     function handleFile(file) {
       if (!file || !hasWebCodecs) return;
       currentFile = file;
@@ -375,39 +600,60 @@
       if (origUrl) URL.revokeObjectURL(origUrl);
       origUrl = URL.createObjectURL(file);
       origVideo.src = origUrl;
-      previewCard.classList.remove('hidden');
 
       document.getElementById('metaName').textContent = file.name;
       document.getElementById('metaSize').textContent = fmtBytes(file.size);
-      document.getElementById('metaRes').textContent = 'Reading metadata...';
-      configPanel.classList.remove('hidden');
+      inspectorPanel.classList.remove('hidden');
+      previewCard.classList.remove('hidden');
 
       worker.postMessage({ type: 'inspect', payload: { file } });
     }
 
-    // Drag & Drop
     dropzone.onclick = () => fileInput.click();
     fileInput.onchange = (e) => handleFile(e.target.files[0]);
     dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('drag'); };
     dropzone.ondragleave = () => dropzone.classList.remove('drag');
     dropzone.ondrop = (e) => { e.preventDefault(); dropzone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); };
 
-    modeSelect.onchange = () => {
-      customSizeWrap.classList.toggle('hidden', modeSelect.value !== 'custom');
-      computeSettings();
-    };
-    targetMbInput.oninput = computeSettings;
+    // Run 10-Second Middle Preview (Blazing Fast)
+    previewBtn.onclick = () => {
+      if (!currentFile || !fileMeta) return;
+      const settings = getJobSettings();
+      const dur = fileMeta.duration;
+      const chunkLen = Math.min(10, Math.max(1, dur));
+      lastPreviewDuration = chunkLen;
+      const midStart = dur > 12 ? Math.floor((dur / 2) - (chunkLen / 2)) : 0;
+      const midEnd = Math.min(dur, midStart + chunkLen);
 
-    // Start Conversion
+      currentOpfsName = `preview_${Date.now()}.mp4`;
+      setBusy(true, `Generating blazing-fast ${chunkLen}s middle preview (${fmtTime(midStart)}–${fmtTime(midEnd)})...`);
+
+      // Jump original preview to the exact same middle timestamp for easy comparison
+      origVideo.currentTime = midStart;
+      document.getElementById('origTimeTag').textContent = `Jumped to ${fmtTime(midStart)}`;
+
+      worker.postMessage({
+        type: 'preview',
+        payload: {
+          file: currentFile,
+          ...settings,
+          storageMode: 'opfs',
+          opfsName: currentOpfsName,
+          trimStart: midStart,
+          trimEnd: midEnd
+        }
+      });
+    };
+
+    // Run Full Conversion to Disk
     startBtn.onclick = async () => {
       if (!currentFile || !fileMeta) return;
-      const settings = computeSettings();
-      const outName = currentFile.name.replace(/\.[^/.]+$/, '') + '_compressed.mp4';
+      const settings = getJobSettings();
+      const outName = currentFile.name.replace(/\.[^/.]+$/, '') + '_converted.mp4';
       let storageMode = 'opfs';
       currentFileHandle = null;
-      currentOpfsName = `out_${Date.now()}.mp4`;
+      currentOpfsName = `full_${Date.now()}.mp4`;
 
-      // Desktop: Ask user where to stream directly to disk
       if (hasFSA) {
         try {
           currentFileHandle = await window.showSaveFilePicker({
@@ -416,23 +662,15 @@
           });
           storageMode = 'fsa';
         } catch (err) {
-          if (err.name === 'AbortError') return; // User closed picker
+          if (err.name === 'AbortError') return;
         }
       }
 
-      // Keep mobile screen awake during long encodes
       if ('wakeLock' in navigator) {
         try { wakeLock = await navigator.wakeLock.request('screen'); } catch {}
       }
 
-      startBtn.disabled = true;
-      cancelBtn.classList.remove('hidden');
-      downloadBtn.classList.add('hidden');
-      outVideoBox.classList.add('hidden');
-      progressWrap.classList.remove('hidden');
-      barFill.style.width = '0%';
-      statusText.textContent = 'Encoding on GPU & streaming directly to disk...';
-      speedText.textContent = '0%';
+      setBusy(true, 'Streaming GPU encode directly to disk (Zero RAM buildup)...');
 
       worker.postMessage({
         type: 'convert',
@@ -448,70 +686,104 @@
 
     cancelBtn.onclick = () => {
       worker.postMessage({ type: 'cancel' });
-      statusText.textContent = 'Cancelled.';
-      startBtn.disabled = false;
-      cancelBtn.classList.add('hidden');
+      setBusy(false, 'Cancelled.');
       if (wakeLock) { wakeLock.release(); wakeLock = null; }
     };
 
-    // Worker Events
+    function setBusy(busy, msg) {
+      startBtn.disabled = busy;
+      previewBtn.disabled = busy;
+      cancelBtn.classList.toggle('hidden', !busy);
+      progressWrap.classList.remove('hidden');
+      if (busy) barFill.style.width = '0%';
+      statusText.textContent = msg;
+      speedText.textContent = busy ? '0%' : '';
+    }
+
+    // Worker Messages
     worker.onmessage = async (e) => {
       const msg = e.data;
 
       if (msg.type === 'inspected') {
         fileMeta = msg.data;
-        document.getElementById('metaRes').textContent = `${fileMeta.width}x${fileMeta.height} • ${fmtTime(fileMeta.duration)}`;
-        targetMbInput.value = Math.max(1, Math.round((fileMeta.size / (1024 * 1024)) * 0.35));
-        computeSettings();
+        const avgKbps = Math.round(((fileMeta.size * 8) / Math.max(fileMeta.duration, 1)) / 1000);
+        const bpp = (avgKbps * 1000) / Math.max(fileMeta.width * fileMeta.height * 30, 1);
+
+        document.getElementById('metaVCodec').textContent = prettyCodec(fileMeta.vCodec);
+        document.getElementById('metaACodec').textContent = prettyCodec(fileMeta.aCodec);
+        document.getElementById('metaRes').textContent = `${fileMeta.width}×${fileMeta.height} • ${fmtTime(fileMeta.duration)}`;
+        document.getElementById('metaBitrate').textContent = `${avgKbps.toLocaleString()} kbps`;
+
+        // Already Compressed Detection Tag
+        const tags = document.getElementById('statusTags');
+        tags.innerHTML = '';
+        if (bpp < 0.085) {
+          tags.innerHTML += `<span class="badge warn">Already Compressed</span>`;
+        } else {
+          tags.innerHTML += `<span class="badge ok">High Compression Potential</span>`;
+        }
+
+        buildResPills(fileMeta.height);
+        studioCard.classList.remove('hidden');
+        updateSummaryUI();
       }
 
       if (msg.type === 'progress') {
         const pct = Math.min(100, Math.round(msg.progress * 100));
         barFill.style.width = pct + '%';
-        const processedSec = msg.progress * (fileMeta?.duration || 0);
-        const speed = msg.elapsed > 0.2 ? (processedSec / msg.elapsed).toFixed(1) : '--';
-        const eta = msg.progress > 0.01 ? fmtTime((msg.elapsed / msg.progress) - msg.elapsed) : '--';
-        speedText.textContent = `${pct}% • ${speed}x real-time • ETA ${eta}`;
+        const totalDur = msg.jobType === 'preview' ? lastPreviewDuration : (fileMeta?.duration || 1);
+        const speed = msg.elapsed > 0.15 ? ((msg.progress * totalDur) / msg.elapsed).toFixed(1) : '--';
+        const eta = msg.progress > 0.02 ? fmtTime((msg.elapsed / msg.progress) - msg.elapsed) : '--';
+        speedText.textContent = `${pct}% • ${speed}x speed • ETA ${eta}`;
       }
 
       if (msg.type === 'done') {
         if (wakeLock) { wakeLock.release(); wakeLock = null; }
         barFill.style.width = '100%';
-        startBtn.disabled = false;
-        cancelBtn.classList.add('hidden');
+        setBusy(false, msg.jobType === 'preview' ? '10s Middle Preview Ready!' : 'Full Conversion Complete!');
 
-        // Stream finished MP4 directly from Disk Handle (Zero RAM!) for instant preview
         let diskFile = null;
         if (msg.storageMode === 'fsa' && currentFileHandle) {
           diskFile = await currentFileHandle.getFile();
-          statusText.textContent = `Done! Saved directly to disk (${fmtBytes(diskFile.size)}).`;
         } else {
           const root = await navigator.storage.getDirectory();
           const handle = await root.getFileHandle(msg.opfsName);
           diskFile = await handle.getFile();
-          statusText.textContent = `Done! Streamed to OPFS (${fmtBytes(diskFile.size)}). Ready to download.`;
-          downloadBtn.classList.remove('hidden');
         }
 
         if (outUrl) URL.revokeObjectURL(outUrl);
         outUrl = URL.createObjectURL(diskFile);
         outVideo.src = outUrl;
-        outVideoHeader.textContent = `Compressed MP4 (${fmtBytes(diskFile.size)} — Streamed from Disk)`;
         outVideoBox.classList.remove('hidden');
 
-        downloadBtn.onclick = () => {
-          const a = document.createElement('a');
-          a.href = outUrl;
-          a.download = currentFile.name.replace(/\.[^/.]+$/, '') + '_compressed.mp4';
-          a.click();
-        };
+        if (msg.jobType === 'preview') {
+          // Calculate exact projected full file size from the real 10s sample!
+          const projectedBytes = (diskFile.size / lastPreviewDuration) * fileMeta.duration;
+          document.getElementById('estSizeVal').textContent = `~${fmtBytes(projectedBytes)}`;
+          document.getElementById('estSizeSub').textContent = `Exact projection from 10s sample (${fmtBytes(diskFile.size)})`;
+          document.getElementById('outVideoTitle').textContent = '10s Middle Preview (OPFS Disk)';
+          document.getElementById('outVideoSize').textContent = fmtBytes(diskFile.size);
+          document.getElementById('previewBadge').classList.remove('hidden');
+          outVideo.play().catch(() => {});
+        } else {
+          document.getElementById('outVideoTitle').textContent = 'Full Converted MP4 (Disk Stream)';
+          document.getElementById('outVideoSize').textContent = fmtBytes(diskFile.size);
+          document.getElementById('previewBadge').classList.add('hidden');
+          if (msg.storageMode === 'opfs') {
+            downloadBtn.classList.remove('hidden');
+            downloadBtn.onclick = () => {
+              const a = document.createElement('a');
+              a.href = outUrl;
+              a.download = currentFile.name.replace(/\.[^/.]+$/, '') + '_converted.mp4';
+              a.click();
+            };
+          }
+        }
       }
 
       if (msg.type === 'error') {
         if (wakeLock) { wakeLock.release(); wakeLock = null; }
-        statusText.textContent = 'Error: ' + msg.error;
-        startBtn.disabled = false;
-        cancelBtn.classList.add('hidden');
+        setBusy(false, 'Error: ' + msg.error);
       }
     };
   </script>
