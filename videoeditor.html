@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UltraFast Local MP4 Converter & Visually Lossless Compressor</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card: #131a2a;
+      --border: #232f46;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; display: flex; justify-content: center; }
+    .app { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 18px; }
+    header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
+    .badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 999px; background: #1e293b; border: 1px solid var(--border); color: var(--muted); }
+    .badge.ok { color: var(--success); border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.1); }
+    .badge.warn { color: var(--warn); border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.1); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .dropzone {
+      border: 2px dashed var(--border); border-radius: 12px; padding: 36px 20px; text-align: center;
+      cursor: pointer; transition: 0.2s; background: rgba(255,255,255,0.01);
+    }
+    .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(59,130,246,0.06); }
+    .dropzone p { color: var(--muted); margin-top: 8px; font-size: 0.9rem; }
+    .hidden { display: none !important; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px; }
+    .stat { background: #0d1322; border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .stat label { display: block; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat span { display: block; font-size: 1rem; font-weight: 600; margin-top: 4px; }
+    .controls { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    select, input[type="number"] {
+      background: #0d1322; color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; font-size: 0.92rem; outline: none;
+    }
+    select:focus, input:focus { border-color: var(--accent); }
+    button {
+      background: var(--accent); color: #fff; border: none; border-radius: 9px;
+      padding: 12px 20px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+    }
+    button:hover:not(:disabled) { background: var(--accent-hover); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.secondary { background: #1e293b; color: var(--text); border: 1px solid var(--border); }
+    button.danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.4); }
+    .progress-wrap { margin-top: 16px; }
+    .bar-bg { width: 100%; height: 10px; background: #0d1322; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+    .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.15s linear; }
+    .progress-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 14px; }
+    .video-box { background: #05080f; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .video-box header { padding: 8px 12px; background: #0d1322; border-bottom: 1px solid var(--border); font-size: 0.82rem; color: var(--muted); }
+    video { width: 100%; max-height: 300px; display: block; background: #000; }
+    .alert { padding: 12px 14px; border-radius: 10px; font-size: 0.88rem; margin-top: 12px; }
+    .alert.warn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.35); color: #fcd34d; }
+    .alert.err { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>⚡ Local GPU MP4 Converter & Compressor</h1>
+      <div class="row">
+        <span id="gpuBadge" class="badge">Checking WebCodecs...</span>
+        <span id="diskBadge" class="badge">Checking Disk Engine...</span>
+      </div>
+    </header>
+
+    <div id="unsupportedAlert" class="alert err hidden">
+      Your browser does not support Hardware WebCodecs. Please open this page in Chrome, Edge, Safari, or Desktop Firefox.
+    </div>
+
+    <!-- Upload Card -->
+    <div class="card">
+      <div id="dropzone" class="dropzone">
+        <strong>Drop any video file here or click to browse</strong>
+        <p>100% Local GPU Processing • Zero Server Cost • Zero RAM Limits (Streams directly to disk)</p>
+        <input id="fileInput" type="file" accept="video/*,.mkv,.mov,.webm,.avi,.ts,.m4v" class="hidden" />
+      </div>
+
+      <!-- File Info & Settings -->
+      <div id="configPanel" class="hidden">
+        <div class="grid">
+          <div class="stat"><label>File Name</label><span id="metaName">-</span></div>
+          <div class="stat"><label>Original Size</label><span id="metaSize">-</span></div>
+          <div class="stat"><label>Resolution & Duration</label><span id="metaRes">-</span></div>
+          <div class="stat"><label>Estimated Output</label><span id="metaEst" style="color: var(--success);">-</span></div>
+        </div>
+
+        <div class="controls">
+          <div class="row">
+            <label for="modeSelect" style="font-size:0.9rem; color:var(--muted);">Compression Mode:</label>
+            <select id="modeSelect">
+              <option value="lossless">Visually Lossless (Imperceptible to Human Eye)</option>
+              <option value="custom">Custom Target Size (MB)</option>
+            </select>
+
+            <div id="customSizeWrap" class="row hidden">
+              <input id="targetMb" type="number" min="1" step="1" value="25" style="width:110px;" />
+              <span style="font-size:0.88rem; color:var(--muted);">MB</span>
+            </div>
+          </div>
+
+          <div id="qualityWarn" class="alert warn hidden">
+            Below the visually lossless threshold — slight softening may occur. Resolution will auto-scale to keep the image clean.
+          </div>
+
+          <div class="row">
+            <button id="startBtn">Convert & Compress to MP4</button>
+            <button id="cancelBtn" class="danger hidden">Cancel</button>
+            <button id="downloadBtn" class="secondary hidden">Save / Download MP4</button>
+          </div>
+        </div>
+
+        <!-- Live Progress -->
+        <div id="progressWrap" class="progress-wrap hidden">
+          <div class="bar-bg"><div id="barFill" class="bar-fill"></div></div>
+          <div class="progress-meta">
+            <span id="statusText">Initializing GPU pipeline...</span>
+            <span id="speedText">0% • --x speed • ETA --</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disk-Streamed Preview Card -->
+    <div id="previewCard" class="card hidden">
+      <strong style="font-size:0.95rem;">Disk-Streamed Preview (Zero RAM)</strong>
+      <div class="preview-grid">
+        <div class="video-box">
+          <header>Original Input (Direct Disk Stream)</header>
+          <video id="origVideo" controls playsinline muted></video>
+        </div>
+        <div id="outVideoBox" class="video-box hidden">
+          <header id="outVideoHeader">Compressed MP4 (Streamed from Disk)</header>
+          <video id="outVideo" controls playsinline></video>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- INLINE MODULE WEB WORKER (Zero-RAM WebCodecs + Mediabunny Pipeline)   -->
+  <!-- ===================================================================== -->
+  <script id="worker-code" type="javascript/worker">
+    import {
+      Input,
+      Output,
+      Conversion,
+      ALL_FORMATS,
+      BlobSource,
+      Mp4OutputFormat,
+      StreamTarget
+    } from 'https://cdn.jsdelivr.net/npm/mediabunny@1/+esm';
+
+    let activeConversion = null;
+
+    self.onmessage = async (e) => {
+      const { type, payload } = e.data;
+
+      if (type === 'cancel') {
+        if (activeConversion) {
+          await activeConversion.cancel();
+          activeConversion = null;
+        }
+        return;
+      }
+
+      if (type === 'inspect') {
+        try {
+          const input = new Input({
+            source: new BlobSource(payload.file),
+            formats: ALL_FORMATS
+          });
+          const duration = await input.computeDuration();
+          const videoTrack = await input.getPrimaryVideoTrack();
+          const width = videoTrack ? await videoTrack.getDisplayWidth() : 0;
+          const height = videoTrack ? await videoTrack.getDisplayHeight() : 0;
+
+          self.postMessage({
+            type: 'inspected',
+            data: { duration, width, height, size: payload.file.size }
+          });
+        } catch (err) {
+          self.postMessage({ type: 'error', error: 'Could not read video: ' + err.message });
+        }
+        return;
+      }
+
+      if (type === 'convert') {
+        const { file, videoBitrate, audioBitrate, targetHeight, storageMode, fileHandle, opfsName } = payload;
+        let writable = null;
+
+        try {
+          // 1. Open Zero-RAM Disk Stream (FSA on Desktop, OPFS on Mobile/Safari/Firefox)
+          if (storageMode === 'fsa' && fileHandle) {
+            writable = await fileHandle.createWritable();
+          } else {
+            const root = await navigator.storage.getDirectory();
+            const opfsHandle = await root.getFileHandle(opfsName, { create: true });
+            writable = await opfsHandle.createWritable();
+          }
+
+          // 2. Lazy Disk Input (Never loads full file into RAM)
+          const input = new Input({
+            source: new BlobSource(file),
+            formats: ALL_FORMATS
+          });
+
+          // 3. Chunked Disk Output (Batches disk writes for maximum speed)
+          const output = new Output({
+            format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
+            target: new StreamTarget(writable, { chunked: true })
+          });
+
+          const videoConfig = {
+            codec: 'avc', // Universal H.264 GPU Hardware Accelerated
+            bitrate: videoBitrate,
+            hardwareAcceleration: 'prefer-hardware'
+          };
+          if (targetHeight) videoConfig.height = targetHeight;
+
+          activeConversion = await Conversion.init({
+            input,
+            output,
+            video: videoConfig,
+            audio: {
+              codec: 'aac',
+              bitrate: audioBitrate
+            }
+          });
+
+          if (!activeConversion.isValid) {
+            throw new Error('Unsupported track combination or codec in this browser.');
+          }
+
+          const startTime = performance.now();
+          activeConversion.onProgress = (progress) => {
+            const elapsed = (performance.now() - startTime) / 1000;
+            self.postMessage({ type: 'progress', progress, elapsed });
+          };
+
+          await activeConversion.execute();
+          activeConversion = null;
+
+          self.postMessage({ type: 'done', storageMode, opfsName });
+        } catch (err) {
+          if (writable) {
+            try { await writable.abort(); } catch {}
+          }
+          self.postMessage({ type: 'error', error: err.message || String(err) });
+        }
+      }
+    };
+  </script>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN THREAD CONTROLLER                                                -->
+  <!-- ===================================================================== -->
+  <script>
+    const hasWebCodecs = 'VideoEncoder' in window && 'VideoDecoder' in window;
+    const hasFSA = 'showSaveFilePicker' in window;
+
+    const gpuBadge = document.getElementById('gpuBadge');
+    const diskBadge = document.getElementById('diskBadge');
+    const unsupportedAlert = document.getElementById('unsupportedAlert');
+
+    if (hasWebCodecs) {
+      gpuBadge.textContent = 'GPU WebCodecs: Active';
+      gpuBadge.classList.add('ok');
+    } else {
+      gpuBadge.textContent = 'GPU WebCodecs: Unsupported';
+      gpuBadge.classList.add('warn');
+      unsupportedAlert.classList.remove('hidden');
+    }
+
+    diskBadge.textContent = hasFSA ? 'Disk Engine: File System Access API' : 'Disk Engine: OPFS (Mobile/Universal)';
+    diskBadge.classList.add('ok');
+
+    // Boot Inline Module Worker
+    const workerBlob = new Blob([document.getElementById('worker-code').textContent], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(workerBlob), { type: 'module' });
+
+    // UI Elements
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const configPanel = document.getElementById('configPanel');
+    const previewCard = document.getElementById('previewCard');
+    const origVideo = document.getElementById('origVideo');
+    const outVideo = document.getElementById('outVideo');
+    const outVideoBox = document.getElementById('outVideoBox');
+    const outVideoHeader = document.getElementById('outVideoHeader');
+    const modeSelect = document.getElementById('modeSelect');
+    const customSizeWrap = document.getElementById('customSizeWrap');
+    const targetMbInput = document.getElementById('targetMb');
+    const qualityWarn = document.getElementById('qualityWarn');
+    const startBtn = document.getElementById('startBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const progressWrap = document.getElementById('progressWrap');
+    const barFill = document.getElementById('barFill');
+    const statusText = document.getElementById('statusText');
+    const speedText = document.getElementById('speedText');
+
+    let currentFile = null;
+    let fileMeta = null;
+    let currentFileHandle = null;
+    let currentOpfsName = null;
+    let wakeLock = null;
+    let origUrl = null;
+    let outUrl = null;
+
+    const fmtBytes = (b) => {
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(2) + ' MB';
+      return (b / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    };
+
+    const fmtTime = (s) => {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    };
+
+    // Perceptual Visually Lossless Bitrate Calculator (~0.095 BPP for H.264 High Profile VBR)
+    function computeSettings() {
+      if (!fileMeta) return null;
+      const { width, height, duration, size } = fileMeta;
+      const pixels = Math.max(width * height, 640 * 360);
+      const fps = 30;
+      const losslessVideoBps = Math.round(pixels * fps * 0.095); // Visually lossless floor
+      const audioBps = 128_000;
+
+      if (modeSelect.value === 'lossless') {
+        qualityWarn.classList.add('hidden');
+        // Never exceed original file's average bitrate
+        const origTotalBps = (size * 8) / Math.max(duration, 1);
+        const videoBps = Math.min(losslessVideoBps, Math.max(origTotalBps * 0.75, 400_000));
+        const estBytes = ((videoBps + audioBps) * duration) / 8;
+        document.getElementById('metaEst').textContent = `~${fmtBytes(estBytes)} (Visually Lossless)`;
+        return { videoBitrate: Math.round(videoBps), audioBitrate: audioBps, targetHeight: null };
+      } else {
+        const targetBytes = Math.max(1, Number(targetMbInput.value) || 10) * 1024 * 1024;
+        const totalBps = (targetBytes * 8) / Math.max(duration, 1);
+        const chosenAudio = totalBps < 400_000 ? 64_000 : 128_000;
+        const videoBps = Math.max(80_000, totalBps - chosenAudio);
+
+        let targetHeight = null;
+        if (videoBps < 250_000) targetHeight = Math.min(height, 360);
+        else if (videoBps < 600_000) targetHeight = Math.min(height, 480);
+        else if (videoBps < 1_500_000) targetHeight = Math.min(height, 720);
+
+        qualityWarn.classList.toggle('hidden', videoBps >= losslessVideoBps * 0.85);
+        document.getElementById('metaEst').textContent = `~${fmtBytes(targetBytes)} (${targetHeight ? targetHeight + 'p' : 'Original Res'})`;
+        return { videoBitrate: Math.round(videoBps), audioBitrate: chosenAudio, targetHeight };
+      }
+    }
+
+    function handleFile(file) {
+      if (!file || !hasWebCodecs) return;
+      currentFile = file;
+      outVideoBox.classList.add('hidden');
+      downloadBtn.classList.add('hidden');
+      progressWrap.classList.add('hidden');
+
+      if (origUrl) URL.revokeObjectURL(origUrl);
+      origUrl = URL.createObjectURL(file);
+      origVideo.src = origUrl;
+      previewCard.classList.remove('hidden');
+
+      document.getElementById('metaName').textContent = file.name;
+      document.getElementById('metaSize').textContent = fmtBytes(file.size);
+      document.getElementById('metaRes').textContent = 'Reading metadata...';
+      configPanel.classList.remove('hidden');
+
+      worker.postMessage({ type: 'inspect', payload: { file } });
+    }
+
+    // Drag & Drop
+    dropzone.onclick = () => fileInput.click();
+    fileInput.onchange = (e) => handleFile(e.target.files[0]);
+    dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('drag'); };
+    dropzone.ondragleave = () => dropzone.classList.remove('drag');
+    dropzone.ondrop = (e) => { e.preventDefault(); dropzone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); };
+
+    modeSelect.onchange = () => {
+      customSizeWrap.classList.toggle('hidden', modeSelect.value !== 'custom');
+      computeSettings();
+    };
+    targetMbInput.oninput = computeSettings;
+
+    // Start Conversion
+    startBtn.onclick = async () => {
+      if (!currentFile || !fileMeta) return;
+      const settings = computeSettings();
+      const outName = currentFile.name.replace(/\.[^/.]+$/, '') + '_compressed.mp4';
+      let storageMode = 'opfs';
+      currentFileHandle = null;
+      currentOpfsName = `out_${Date.now()}.mp4`;
+
+      // Desktop: Ask user where to stream directly to disk
+      if (hasFSA) {
+        try {
+          currentFileHandle = await window.showSaveFilePicker({
+            suggestedName: outName,
+            types: [{ description: 'MP4 Video', accept: { 'video/mp4': ['.mp4'] } }]
+          });
+          storageMode = 'fsa';
+        } catch (err) {
+          if (err.name === 'AbortError') return; // User closed picker
+        }
+      }
+
+      // Keep mobile screen awake during long encodes
+      if ('wakeLock' in navigator) {
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+      }
+
+      startBtn.disabled = true;
+      cancelBtn.classList.remove('hidden');
+      downloadBtn.classList.add('hidden');
+      outVideoBox.classList.add('hidden');
+      progressWrap.classList.remove('hidden');
+      barFill.style.width = '0%';
+      statusText.textContent = 'Encoding on GPU & streaming directly to disk...';
+      speedText.textContent = '0%';
+
+      worker.postMessage({
+        type: 'convert',
+        payload: {
+          file: currentFile,
+          ...settings,
+          storageMode,
+          fileHandle: currentFileHandle,
+          opfsName: currentOpfsName
+        }
+      });
+    };
+
+    cancelBtn.onclick = () => {
+      worker.postMessage({ type: 'cancel' });
+      statusText.textContent = 'Cancelled.';
+      startBtn.disabled = false;
+      cancelBtn.classList.add('hidden');
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    };
+
+    // Worker Events
+    worker.onmessage = async (e) => {
+      const msg = e.data;
+
+      if (msg.type === 'inspected') {
+        fileMeta = msg.data;
+        document.getElementById('metaRes').textContent = `${fileMeta.width}x${fileMeta.height} • ${fmtTime(fileMeta.duration)}`;
+        targetMbInput.value = Math.max(1, Math.round((fileMeta.size / (1024 * 1024)) * 0.35));
+        computeSettings();
+      }
+
+      if (msg.type === 'progress') {
+        const pct = Math.min(100, Math.round(msg.progress * 100));
+        barFill.style.width = pct + '%';
+        const processedSec = msg.progress * (fileMeta?.duration || 0);
+        const speed = msg.elapsed > 0.2 ? (processedSec / msg.elapsed).toFixed(1) : '--';
+        const eta = msg.progress > 0.01 ? fmtTime((msg.elapsed / msg.progress) - msg.elapsed) : '--';
+        speedText.textContent = `${pct}% • ${speed}x real-time • ETA ${eta}`;
+      }
+
+      if (msg.type === 'done') {
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        barFill.style.width = '100%';
+        startBtn.disabled = false;
+        cancelBtn.classList.add('hidden');
+
+        // Stream finished MP4 directly from Disk Handle (Zero RAM!) for instant preview
+        let diskFile = null;
+        if (msg.storageMode === 'fsa' && currentFileHandle) {
+          diskFile = await currentFileHandle.getFile();
+          statusText.textContent = `Done! Saved directly to disk (${fmtBytes(diskFile.size)}).`;
+        } else {
+          const root = await navigator.storage.getDirectory();
+          const handle = await root.getFileHandle(msg.opfsName);
+          diskFile = await handle.getFile();
+          statusText.textContent = `Done! Streamed to OPFS (${fmtBytes(diskFile.size)}). Ready to download.`;
+          downloadBtn.classList.remove('hidden');
+        }
+
+        if (outUrl) URL.revokeObjectURL(outUrl);
+        outUrl = URL.createObjectURL(diskFile);
+        outVideo.src = outUrl;
+        outVideoHeader.textContent = `Compressed MP4 (${fmtBytes(diskFile.size)} — Streamed from Disk)`;
+        outVideoBox.classList.remove('hidden');
+
+        downloadBtn.onclick = () => {
+          const a = document.createElement('a');
+          a.href = outUrl;
+          a.download = currentFile.name.replace(/\.[^/.]+$/, '') + '_compressed.mp4';
+          a.click();
+        };
+      }
+
+      if (msg.type === 'error') {
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        statusText.textContent = 'Error: ' + msg.error;
+        startBtn.disabled = false;
+        cancelBtn.classList.add('hidden');
+      }
+    };
+  </script>
+</body>
+</html>
