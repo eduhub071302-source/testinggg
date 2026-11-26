@@ -1,23 +1,26 @@
 import { ToolCategoryId, ToolDefinition } from '../types/studio';
+import sampleHeadphonesUrl from '../assets/images/sample_product_headphones_1795695032380.jpg';
+import sampleArchitectureUrl from '../assets/images/sample_architecture_tokyo_1795695034252.jpg';
+import samplePortraitUrl from '../assets/images/sample_portrait_studio_1795695033684.jpg';
 
 export const SAMPLE_ASSETS = [
   {
     id: 'sample-headphones',
     name: 'auralis-studio-headphones.jpg',
     label: 'Product Studio (White BG)',
-    url: '/src/assets/images/sample_product_headphones_1795695032380.jpg',
+    url: sampleHeadphonesUrl,
   },
   {
     id: 'sample-architecture',
     name: 'museum-courtyard-golden-hour.jpg',
     label: 'Architecture (16:9)',
-    url: '/src/assets/images/sample_architecture_tokyo_1795695034252.jpg',
+    url: sampleArchitectureUrl,
   },
   {
     id: 'sample-portrait',
     name: 'editorial-portrait-studio.jpg',
     label: 'Portrait (ID / Masking)',
-    url: '/src/assets/images/sample_portrait_studio_1795695033684.jpg',
+    url: samplePortraitUrl,
   },
 ] as const;
 
