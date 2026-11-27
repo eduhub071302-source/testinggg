@@ -1757,6 +1757,8 @@
         onOpenMediaView: cfOnOpenMediaView,
         isPortrait: cfIsPortrait,
         importProgress: cfImportProgress,
+        uploadError: cfUploadError,
+        onDismissUploadError: cfOnDismissUploadError,
       }) {
         let [xe, Se] = a(1),
           zoom = xe,
@@ -2080,36 +2082,6 @@
                 T(`div`, {
                   className: `flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 shrink-0`,
                   children: [
-                    t &&
-                      T(`div`, {
-                        className: `hidden xl:flex items-center gap-1.5 font-mono tabular-nums text-[11px] whitespace-nowrap`,
-                        children: [
-                          T(`span`, { children: [t.width, `×`, t.height] }),
-                          w(`span`, { "aria-hidden": `true`, children: `·` }),
-                          w(`span`, { children: z(t.currentBytes) }),
-                          R !== 0 &&
-                            T(he, {
-                              children: [
-                                w(`span`, {
-                                  "aria-hidden": `true`,
-                                  children: `·`,
-                                }),
-                                w(`span`, {
-                                  className:
-                                    R > 0
-                                      ? `text-emerald-600 dark:text-emerald-400 font-semibold`
-                                      : `text-amber-600`,
-                                  children:
-                                    R > 0 ? `-${R}%` : `+${Math.abs(R)}%`,
-                                }),
-                              ],
-                            }),
-                          w(`span`, { "aria-hidden": `true`, children: `·` }),
-                          T(`span`, {
-                            children: [z(r.trackedBytes), ` / 300 MB`],
-                          }),
-                        ],
-                      }),
                     T(`div`, {
                       className: `flex items-center gap-0.5`,
                       children: [
@@ -2186,6 +2158,23 @@
                         ` / `,
                         cfImportProgress.total,
                         ` · RAM Safe`,
+                      ],
+                    }),
+                  cfUploadError &&
+                    T(`div`, {
+                      role: `alert`,
+                      "data-testid": `upload-error-banner`,
+                      className: `cf-error-toast`,
+                      onPointerDown: (ev) => ev.stopPropagation(),
+                      children: [
+                        w(`span`, { children: `⚠️ ${cfUploadError}` }),
+                        w(`button`, {
+                          type: `button`,
+                          onClick: cfOnDismissUploadError,
+                          "aria-label": `Dismiss upload error`,
+                          className: `cf-error-toast-close`,
+                          children: `×`,
+                        }),
                       ],
                     }),
                   t
@@ -2522,6 +2511,43 @@
                 ],
               }),
             }),
+            t &&
+              T(`div`, {
+                "data-testid": `filmstrip-stats-bar`,
+                className: `cf-mini-stats-row`,
+                children: [
+                  T(`span`, { children: [t.width, `×`, t.height] }),
+                  w(`span`, { "aria-hidden": `true`, children: `·` }),
+                  w(`span`, { children: z(t.currentBytes) }),
+                  R !== 0 &&
+                    T(he, {
+                      children: [
+                        w(`span`, { "aria-hidden": `true`, children: `·` }),
+                        w(`span`, {
+                          className:
+                            R > 0
+                              ? `text-emerald-600 dark:text-emerald-400 font-semibold`
+                              : `text-amber-600 font-semibold`,
+                          children: R > 0 ? `-${R}%` : `+${Math.abs(R)}%`,
+                        }),
+                      ],
+                    }),
+                  w(`span`, { "aria-hidden": `true`, children: `·` }),
+                  T(`span`, {
+                    children: [z(r.trackedBytes), ` / 300 MB`],
+                  }),
+                  t.hasTransparency &&
+                    T(he, {
+                      children: [
+                        w(`span`, { "aria-hidden": `true`, children: `·` }),
+                        w(`span`, {
+                          className: `text-emerald-600 dark:text-emerald-400 font-semibold`,
+                          children: `Alpha`,
+                        }),
+                      ],
+                    }),
+                ],
+              }),
             T(`div`, {
               "data-testid": `filmstrip-row`,
               className: `h-[74px] shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 flex items-center gap-2`,
@@ -2541,7 +2567,7 @@
                             className: `flex items-center gap-2 text-left focus-visible:outline-none`,
                             children: [
                               T(`div`, {
-                                className: `relative w-11 h-11 shrink-0`,
+                                className: `relative w-11 h-11 shrink-0 rounded overflow-hidden studio-checkerboard border border-slate-200 dark:border-slate-700`,
                                 children: [
                                   w(`img`, {
                                     src: item.thumbUrl || item.previewUrl,
@@ -2549,7 +2575,7 @@
                                     loading: `lazy`,
                                     decoding: `async`,
                                     referrerPolicy: `no-referrer`,
-                                    className: `w-11 h-11 rounded object-cover bg-slate-200 dark:bg-slate-800`,
+                                    className: `w-11 h-11 object-contain`,
                                   }),
                                   item.mediaKind === `video` &&
                                     w(`span`, {
@@ -3271,6 +3297,27 @@
               `retro`,
             ],
             supportsBatch: !0,
+            interactiveMode: `split`,
+          },
+          {
+            id: `transparent-bg`,
+            number: 81,
+            name: `Transparent Background Studio`,
+            shortName: `Transparent BG Studio`,
+            category: `color`,
+            description: `Add custom image/gallery backgrounds, solid colors, gradients, or multi-color mixes behind transparent images. Unlocks only for transparent-background media.`,
+            keywords: [
+              `background`,
+              `transparent`,
+              `alpha`,
+              `gradient`,
+              `mix`,
+              `color`,
+              `custom`,
+              `gallery`,
+              `backdrop`,
+            ],
+            supportsBatch: !1,
             interactiveMode: `split`,
           },
           {
@@ -4400,7 +4447,7 @@
         `mpg`,
         `mpeg`,
       ]);
-      var Ge = new Set([
+      var cfImageExts = new Set([
         `jpg`,
         `jpeg`,
         `png`,
@@ -4424,10 +4471,9 @@
         `raf`,
         `jxl`,
         `jp2`,
-        `psd`,
-        `pdf`,
-        ...cfVideoExts,
+        `jfif`,
       ]);
+      var Ge = new Set([...cfImageExts]);
       function cfSafeExt(name = ``, mime = ``) {
         let m = name.includes(`.`)
           ? name
@@ -4447,14 +4493,58 @@
         }
         return `bin`;
       }
+      function cfIsStrictImageFile(file) {
+        if (!file) return !1;
+        let mime = (file.type || ``).toLowerCase(),
+          name = file.name || ``,
+          ext = cfSafeExt(name, mime);
+        if (
+          mime.startsWith(`video/`) ||
+          mime.startsWith(`audio/`) ||
+          mime.startsWith(`text/`) ||
+          mime.startsWith(`application/`) ||
+          cfVideoExts.has(ext) ||
+          ext === `pdf` ||
+          ext === `psd`
+        )
+          return !1;
+        if (
+          mime.startsWith(`image/`) &&
+          !mime.includes(`photoshop`) &&
+          !mime.includes(`vnd.adobe`)
+        )
+          return !0;
+        return cfImageExts.has(ext);
+      }
+      function cfSplitValidImages(files) {
+        let valid = [],
+          blocked = [];
+        for (let f of Array.from(files || [])) {
+          if (!f) continue;
+          cfIsStrictImageFile(f) ? valid.push(f) : blocked.push(f);
+        }
+        return { valid, blocked };
+      }
+      function cfFormatBlockedError(blocked, uploadedCount = 0) {
+        let names = blocked
+            .slice(0, 3)
+            .map((f) => f.name || `unnamed`)
+            .join(`, `),
+          extra = blocked.length > 3 ? ` +${blocked.length - 3} more` : ``;
+        return uploadedCount > 0
+          ? `Uploaded ${uploadedCount} image(s). Blocked ${blocked.length} non-image file(s) (${names}${extra}) — only image formats are allowed.`
+          : `Upload blocked: ${blocked.length} non-image file(s) rejected (${names}${extra}). Only image formats (JPG, PNG, WebP, AVIF, GIF, SVG, BMP, TIFF, HEIC, ICO) are supported.`;
+      }
       function cfClassifyMedia(name = ``, mime = ``) {
         let lowerMime = (mime || ``).toLowerCase(),
           ext = cfSafeExt(name, mime);
         if (lowerMime.startsWith(`video/`) || cfVideoExts.has(ext))
           return `video`;
         if (
-          lowerMime.startsWith(`image/`) ||
-          (Ge.has(ext) && ext !== `pdf` && ext !== `psd`)
+          (lowerMime.startsWith(`image/`) &&
+            !lowerMime.includes(`photoshop`) &&
+            !lowerMime.includes(`vnd.adobe`)) ||
+          cfImageExts.has(ext)
         )
           return `image`;
         return `media`;
@@ -4480,9 +4570,10 @@
         canvas.height = th;
         let ctx = canvas.getContext(`2d`);
         if (!ctx) return (R.disposeCanvas(canvas), null);
+        ctx.clearRect(0, 0, tw, th);
         ctx.drawImage(source, 0, 0, tw, th);
         let blob = await new Promise((res) =>
-          canvas.toBlob((b) => res(b), `image/jpeg`, 0.72),
+          canvas.toBlob((b) => res(b), `image/png`),
         );
         return (R.disposeCanvas(canvas), blob);
       }
@@ -4570,6 +4661,45 @@
           fallbackThumb: cfMakeBadgeThumb(ext, !0),
         };
       }
+      function cfHasAlphaTransparency(source, srcW, srcH) {
+        let maxEdge = 128,
+          scale = Math.min(1, maxEdge / Math.max(1, srcW, srcH)),
+          tw = Math.max(1, Math.round(srcW * scale)),
+          th = Math.max(1, Math.round(srcH * scale)),
+          canvas = document.createElement(`canvas`);
+        canvas.width = tw;
+        canvas.height = th;
+        let ctx = canvas.getContext(`2d`, { willReadFrequently: !0 });
+        if (!ctx) return (R.disposeCanvas(canvas), !1);
+        try {
+          ctx.clearRect(0, 0, tw, th);
+          ctx.drawImage(source, 0, 0, tw, th);
+          let data = ctx.getImageData(0, 0, tw, th).data;
+          for (let k = 3; k < data.length; k += 4) {
+            if (data[k] < 250) return !0;
+          }
+          return !1;
+        } catch {
+          return !1;
+        } finally {
+          R.disposeCanvas(canvas);
+        }
+      }
+      async function cfDetectBlobAlpha(blob, name = `image`) {
+        if (!blob) return !1;
+        try {
+          let bmp = await q(blob, name),
+            hasAlpha = cfHasAlphaTransparency(
+              bmp,
+              bmp.width || 1,
+              bmp.height || 1,
+            );
+          bmp.close();
+          return hasAlpha;
+        } catch {
+          return !1;
+        }
+      }
       async function cfInspectMedia(blob, name = `file`) {
         let kind = cfClassifyMedia(name, blob.type),
           ext = cfSafeExt(name, blob.type);
@@ -4579,6 +4709,7 @@
             let bmp = await q(blob, name),
               w = bmp.width || 1,
               h = bmp.height || 1,
+              hasTransparency = cfHasAlphaTransparency(bmp, w, h),
               thumbBlob = await cfMakeMicroThumbBlob(bmp, w, h, 180);
             return (
               bmp.close(),
@@ -4588,6 +4719,7 @@
                 height: h,
                 duration: 0,
                 playable: !0,
+                hasTransparency,
                 thumbBlob,
                 fallbackThumb: cfMakeBadgeThumb(ext, !1),
               }
@@ -4604,6 +4736,7 @@
               });
               let w = img.naturalWidth || 512,
                 h = img.naturalHeight || 512,
+                hasTransparency = cfHasAlphaTransparency(img, w, h),
                 thumbBlob = await cfMakeMicroThumbBlob(img, w, h, 180);
               return {
                 mediaKind: `image`,
@@ -4611,6 +4744,7 @@
                 height: h,
                 duration: 0,
                 playable: !0,
+                hasTransparency,
                 thumbBlob,
                 fallbackThumb: cfMakeBadgeThumb(ext, !1),
               };
@@ -4684,10 +4818,10 @@
           try {
             let handles = await (0, window.showOpenFilePicker)({
                 multiple: !0,
-                excludeAcceptAllOption: !1,
+                excludeAcceptAllOption: !0,
                 types: [
                   {
-                    description: `All Images, Videos & Media`,
+                    description: `Image Media Formats Only`,
                     accept: {
                       "image/*": [
                         `.jpg`,
@@ -4704,18 +4838,8 @@
                         `.ico`,
                         `.heic`,
                         `.heif`,
+                        `.jfif`,
                       ],
-                      "video/*": [
-                        `.mp4`,
-                        `.mov`,
-                        `.webm`,
-                        `.mkv`,
-                        `.avi`,
-                        `.m4v`,
-                        `.3gp`,
-                        `.ogv`,
-                      ],
-                      "application/pdf": [`.pdf`],
                     },
                   },
                 ],
@@ -4726,11 +4850,11 @@
           } catch (e) {
             if (e instanceof DOMException && e.name === `AbortError`) return [];
           }
-        return cfTriggerInputPicker({ accept: `*/*`, multiple: !0 });
+        return cfTriggerInputPicker({ accept: `image/*`, multiple: !0 });
       }
       async function cfPickGalleryFiles() {
         return cfTriggerInputPicker({
-          accept: `image/*,video/*,*/*`,
+          accept: `image/*`,
           multiple: !0,
         });
       }
@@ -6429,78 +6553,224 @@ endobj
         }
       }
       async function St(e, t, n = `image/webp`, r = !0) {
-        let { canvas: i, width: a, height: o } = await Y(e);
+        let maxBytes = Math.max(512, Math.floor(Number(t) || 153600)),
+          { canvas: srcCanvas, width: srcW, height: srcH } = await Y(e),
+          isLossy =
+            n === `image/webp` ||
+            n === `image/jpeg` ||
+            n === `image/avif` ||
+            n === `application/pdf`,
+          isRawUncompressed = n === `image/bmp` || n === `image/tiff`,
+          isPngBased =
+            n === `image/png` || n === `image/x-icon` || n === `image/svg+xml`,
+          matte =
+            n === `image/jpeg` || n === `application/pdf` ? `#FFFFFF` : null,
+          encodeAt = async (w, h, q, quantColors = 0) => {
+            let c = srcCanvas,
+              temp = !1;
+            if (w !== srcW || h !== srcH || quantColors > 0) {
+              c = document.createElement(`canvas`);
+              c.width = w;
+              c.height = h;
+              let ctx = c.getContext(`2d`, { willReadFrequently: !0 });
+              ctx.imageSmoothingEnabled = !0;
+              ctx.imageSmoothingQuality = `high`;
+              ctx.drawImage(srcCanvas, 0, 0, w, h);
+              if (quantColors > 0) {
+                let imgData = ctx.getImageData(0, 0, w, h),
+                  { rgba } = D(
+                    imgData.data,
+                    w,
+                    h,
+                    quantColors,
+                    quantColors >= 32,
+                  );
+                ctx.putImageData(
+                  new ImageData(new Uint8ClampedArray(rgba), w, h),
+                  0,
+                  0,
+                );
+              }
+              temp = !0;
+            }
+            try {
+              let b = await J(c, n, q, matte);
+              return { blob: b, width: w, height: h };
+            } finally {
+              if (temp) R.disposeCanvas(c);
+            }
+          };
         try {
-          let e = await J(i, n, 0.85),
-            s = a,
-            c = o;
-          if (e.size <= t)
+          // 1. Fast path: already fits at high quality & original dimensions
+          let initial = await encodeAt(srcW, srcH, 0.92, 0);
+          if (initial.blob.size <= maxBytes) {
             return {
-              blob: e,
-              width: s,
-              height: c,
-              mimeType: e.type,
-              extension: K(e.type),
-              summary: `Hit target at 85% quality (${Math.round(e.size / 1024)} KB)`,
+              blob: initial.blob,
+              width: initial.width,
+              height: initial.height,
+              mimeType: initial.blob.type,
+              extension: K(initial.blob.type),
+              summary: `Fit under ${z(maxBytes)} → ${z(initial.blob.size)} (${initial.width}×${initial.height})`,
             };
-          let l = 0.08,
-            u = 0.94,
-            d = null;
-          for (let e = 0; e < 7; e++) {
-            let e = (l + u) / 2,
-              r = await J(i, n, e);
-            r.size <= t ? ((d = r), (l = e)) : (u = e);
           }
-          if (d)
-            return {
-              blob: d,
-              width: s,
-              height: c,
-              mimeType: d.type,
-              extension: K(d.type),
-              summary: `Solved quality ${(l * 100).toFixed(0)}% to fit under ${Math.round(t / 1024)} KB`,
-            };
-          // For lossless/binary codecs (PNG, GIF, BMP, TIFF, ICO, SVG), quantize alpha-safely & downscale to hit exact KB target
-          if (
-            n === `image/png` ||
-            n === `image/gif` ||
-            n === `image/bmp` ||
-            n === `image/tiff` ||
-            n === `image/x-icon` ||
-            n === `image/svg+xml`
-          ) {
-            e = await J(i, n, 0.85);
+
+          let best = null;
+
+          // 2. Lossy codecs (WebP, JPEG, AVIF, PDF): quality binary search -> scale + quality refinement
+          if (isLossy) {
+            let lo = 0.01,
+              hi = 0.92;
+            for (let iter = 0; iter < 10; iter++) {
+              let mid = (lo + hi) / 2,
+                res = await encodeAt(srcW, srcH, mid, 0);
+              if (res.blob.size <= maxBytes) {
+                best = res;
+                lo = mid;
+              } else {
+                hi = mid;
+              }
+            }
+            if (best) {
+              return {
+                blob: best.blob,
+                width: best.width,
+                height: best.height,
+                mimeType: best.blob.type,
+                extension: K(best.blob.type),
+                summary: `Exact target hit: ${z(best.blob.size)} ≤ ${z(maxBytes)} (${Math.round(lo * 100)}% quality)`,
+              };
+            }
+            // Scale binary search at balanced floor quality, then optimize quality upward
+            let sLo = 0.02,
+              sHi = 0.98,
+              bestScale = sLo,
+              floorQ = 0.35;
+            for (let iter = 0; iter < 10; iter++) {
+              let mid = (sLo + sHi) / 2,
+                w = Math.max(4, Math.round(srcW * mid)),
+                h = Math.max(4, Math.round(srcH * mid)),
+                res = await encodeAt(w, h, floorQ, 0);
+              if (res.blob.size <= maxBytes) {
+                best = res;
+                bestScale = mid;
+                sLo = mid;
+              } else {
+                sHi = mid;
+              }
+            }
+            if (best) {
+              let bw = best.width,
+                bh = best.height,
+                qLo = floorQ,
+                qHi = 0.94;
+              for (let iter = 0; iter < 7; iter++) {
+                let midQ = (qLo + qHi) / 2,
+                  res = await encodeAt(bw, bh, midQ, 0);
+                if (res.blob.size <= maxBytes) {
+                  best = res;
+                  qLo = midQ;
+                } else {
+                  qHi = midQ;
+                }
+              }
+            }
+          } else if (isRawUncompressed) {
+            // 3. Analytical O(1) pixel-budget solver for 32-bit BMP & TIFF
+            let headerReserve = n === `image/tiff` ? 512 : 256,
+              maxPixels = Math.max(
+                1,
+                Math.floor((maxBytes - headerReserve) / 4),
+              ),
+              scale = Math.min(
+                1,
+                Math.sqrt(maxPixels / Math.max(1, srcW * srcH)),
+              ),
+              w = Math.max(1, Math.floor(srcW * scale)),
+              h = Math.max(1, Math.floor(srcH * scale)),
+              res = await encodeAt(w, h, 1, 0);
+            while (res.blob.size > maxBytes && (w > 1 || h > 1)) {
+              let ratio = Math.sqrt(maxBytes / res.blob.size) * 0.95;
+              w = Math.max(1, Math.min(w - 1, Math.floor(w * ratio)));
+              h = Math.max(1, Math.min(h - 1, Math.floor(h * ratio)));
+              res = await encodeAt(w, h, 1, 0);
+            }
+            best = res;
           } else {
-            e = await J(i, n, 0.12);
-          }
-          if (r && e.size > t) {
-            let r = Math.sqrt(t / e.size) * 0.92;
-            for (let l = 0; l < 4 && e.size > t; l++) {
-              let t = Math.max(64, Math.round(a * r)),
-                l = Math.max(64, Math.round(o * r)),
-                u = document.createElement(`canvas`);
-              ((u.width = t), (u.height = l));
-              let d = u.getContext(`2d`);
-              ((d.imageSmoothingEnabled = !0),
-                (d.imageSmoothingQuality = `high`),
-                d.drawImage(i, 0, 0, t, l),
-                (e = await J(u, n, 0.65)),
-                (s = t),
-                (c = l),
-                R.disposeCanvas(u),
-                (r *= 0.82));
+            // 4. Lossless / Indexed / Vector-Wrapped (PNG, GIF, ICO, SVG)
+            if (isPngBased) {
+              for (let colors of [128, 64, 32, 16]) {
+                let res = await encodeAt(srcW, srcH, 1, colors);
+                if (res.blob.size <= maxBytes) {
+                  best = res;
+                  break;
+                }
+              }
+            }
+            if (!best) {
+              let quantTry = isPngBased ? 64 : 0,
+                sLo = 0.01,
+                sHi = 0.98;
+              for (let iter = 0; iter < 11; iter++) {
+                let mid = (sLo + sHi) / 2,
+                  w = Math.max(2, Math.round(srcW * mid)),
+                  h = Math.max(2, Math.round(srcH * mid)),
+                  res = await encodeAt(w, h, 1, quantTry);
+                if (res.blob.size <= maxBytes) {
+                  best = res;
+                  sLo = mid;
+                } else {
+                  sHi = mid;
+                }
+              }
+              // Try full-color (unquantized) at the winning scale if it still fits
+              if (best && quantTry > 0) {
+                let fullRes = await encodeAt(best.width, best.height, 1, 0);
+                if (fullRes.blob.size <= maxBytes) best = fullRes;
+              }
             }
           }
+
+          // 5. Hard-ceiling guarantee loop — NEVER exceed maxBytes on any format
+          if (!best || best.blob.size > maxBytes) {
+            let curW = best ? best.width : srcW,
+              curH = best ? best.height : srcH,
+              curRes = best || initial;
+            for (
+              let guard = 0;
+              guard < 24 && curRes.blob.size > maxBytes;
+              guard++
+            ) {
+              let factor = Math.min(
+                0.78,
+                Math.sqrt(maxBytes / Math.max(1, curRes.blob.size)) * 0.88,
+              );
+              let nextW = Math.max(1, Math.floor(curW * factor)),
+                nextH = Math.max(1, Math.floor(curH * factor));
+              if (nextW === curW && curW > 1) nextW -= 1;
+              if (nextH === curH && curH > 1) nextH -= 1;
+              curW = nextW;
+              curH = nextH;
+              curRes = await encodeAt(
+                curW,
+                curH,
+                isLossy ? 0.02 : 1,
+                isPngBased ? 16 : 0,
+              );
+              if (curW <= 1 && curH <= 1) break;
+            }
+            best = curRes;
+          }
+
           return {
-            blob: e,
-            width: s,
-            height: c,
-            mimeType: e.type,
-            extension: K(e.type),
-            summary: `Compressed to ${Math.round(e.size / 1024)} KB (${s}×${c})`,
+            blob: best.blob,
+            width: best.width,
+            height: best.height,
+            mimeType: best.blob.type,
+            extension: K(best.blob.type),
+            summary: `Compressed strictly under ${z(maxBytes)} → ${z(best.blob.size)} (${best.width}×${best.height})`,
           };
         } finally {
-          R.disposeCanvas(i);
+          R.disposeCanvas(srcCanvas);
         }
       }
       async function Ct(e, t, n, r, i = []) {
@@ -6572,10 +6842,12 @@ endobj
           );
         }
         if (n === `target-size`) {
-          let t = Math.max(10, Number(r.targetKb ?? 150)),
-            n = r.format || `image/webp`,
-            i = r.allowDownscale !== !1;
-          return St(e, t * 1024, n, i);
+          let bytes =
+              Number(r.targetBytes) > 0
+                ? Math.max(1024, Math.floor(Number(r.targetBytes)))
+                : Math.max(1024, Math.round(Number(r.targetKb ?? 150) * 1024)),
+            fmt = r.format || `image/webp`;
+          return St(e, bytes, fmt, !0);
         }
         let { canvas: a, ctx: o, width: s, height: c } = await Y(e, t);
         try {
@@ -7506,6 +7778,147 @@ endobj
                   summary: `Applied ${e} retro filter`,
                 }
               );
+            }
+            case `transparent-bg`: {
+              let mode = r.bgMode || `solid`,
+                outFmt = r.format || `image/png`,
+                outCanvas = document.createElement(`canvas`);
+              outCanvas.width = s;
+              outCanvas.height = c;
+              let bctx = outCanvas.getContext(`2d`);
+              try {
+                if (mode === `solid`) {
+                  bctx.fillStyle = String(r.solidColor || `#FFFFFF`);
+                  bctx.fillRect(0, 0, s, c);
+                } else if (mode === `gradient`) {
+                  let gType = r.gradType || `linear`,
+                    angle = (Number(r.gradAngle ?? 135) * Math.PI) / 180,
+                    c1 = String(r.gradC1 || `#2563EB`),
+                    c2 = String(r.gradC2 || `#9333EA`),
+                    c3 = String(r.gradC3 || `#EC4899`),
+                    use3 = !!r.gradUse3,
+                    grad;
+                  if (gType === `radial`) {
+                    grad = bctx.createRadialGradient(
+                      s / 2,
+                      c / 2,
+                      0,
+                      s / 2,
+                      c / 2,
+                      Math.hypot(s, c) / 2,
+                    );
+                  } else {
+                    let dx = Math.cos(angle) * (s / 2),
+                      dy = Math.sin(angle) * (c / 2);
+                    grad = bctx.createLinearGradient(
+                      s / 2 - dx,
+                      c / 2 - dy,
+                      s / 2 + dx,
+                      c / 2 + dy,
+                    );
+                  }
+                  grad.addColorStop(0, c1);
+                  if (use3) {
+                    grad.addColorStop(0.5, c2);
+                    grad.addColorStop(1, c3);
+                  } else {
+                    grad.addColorStop(1, c2);
+                  }
+                  bctx.fillStyle = grad;
+                  bctx.fillRect(0, 0, s, c);
+                } else if (mode === `mix`) {
+                  let m1 = String(r.mixC1 || `#0F172A`),
+                    m2 = String(r.mixC2 || `#2563EB`),
+                    m3 = String(r.mixC3 || `#EC4899`),
+                    m4 = String(r.mixC4 || `#10B981`),
+                    mixStyle = r.mixStyle || `mesh`,
+                    spread = Math.max(
+                      0.35,
+                      Math.min(1.2, Number(r.mixSpread ?? 75) / 100),
+                    );
+                  bctx.fillStyle = m1;
+                  bctx.fillRect(0, 0, s, c);
+                  let radius = Math.hypot(s, c) * 0.62 * spread,
+                    spots =
+                      mixStyle === `aurora`
+                        ? [
+                            [0.15, 0.25, m2],
+                            [0.82, 0.22, m3],
+                            [0.52, 0.85, m4],
+                          ]
+                        : mixStyle === `diagonal`
+                          ? [
+                              [0.05, 0.05, m2],
+                              [0.5, 0.5, m3],
+                              [0.95, 0.95, m4],
+                            ]
+                          : [
+                              [0.12, 0.14, m2],
+                              [0.88, 0.18, m3],
+                              [0.82, 0.88, m4],
+                              [0.18, 0.86, m1],
+                            ];
+                  for (let [px, py, col] of spots) {
+                    let cx = px * s,
+                      cy = py * c,
+                      rg = bctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+                    rg.addColorStop(0, col);
+                    rg.addColorStop(1, `rgba(0,0,0,0)`);
+                    bctx.fillStyle = rg;
+                    bctx.fillRect(0, 0, s, c);
+                  }
+                } else if (mode === `image`) {
+                  if (!r.bgBlob)
+                    throw Error(
+                      `Please upload or choose a custom background image first`,
+                    );
+                  let bgBmp = await q(r.bgBlob, `custom-bg`),
+                    fit = r.bgFit || `cover`,
+                    blurPx = Math.max(0, Number(r.bgBlur ?? 0));
+                  try {
+                    bctx.save();
+                    if (blurPx > 0) bctx.filter = `blur(${blurPx}px)`;
+                    if (fit === `stretch`) {
+                      bctx.drawImage(bgBmp, 0, 0, s, c);
+                    } else {
+                      let scale =
+                          fit === `contain`
+                            ? Math.min(s / bgBmp.width, c / bgBmp.height)
+                            : Math.max(s / bgBmp.width, c / bgBmp.height),
+                        dw = bgBmp.width * scale,
+                        dh = bgBmp.height * scale,
+                        dx = (s - dw) / 2,
+                        dy = (c - dh) / 2;
+                      if (fit === `contain`) {
+                        bctx.fillStyle = String(r.solidColor || `#0F172A`);
+                        bctx.fillRect(0, 0, s, c);
+                      }
+                      bctx.drawImage(bgBmp, dx, dy, dw, dh);
+                    }
+                    bctx.restore();
+                  } finally {
+                    bgBmp.close();
+                  }
+                }
+                // Composite sharp transparent foreground on top of custom background
+                bctx.drawImage(a, 0, 0, s, c);
+                let outBlob = await J(
+                  outCanvas,
+                  outFmt,
+                  outFmt === `image/png` ? 1 : 0.92,
+                  outFmt === `image/jpeg` ? `#FFFFFF` : null,
+                );
+                return {
+                  blob: outBlob,
+                  width: s,
+                  height: c,
+                  mimeType: outBlob.type,
+                  extension: K(outBlob.type),
+                  summary: `Applied ${mode} custom background to transparent image (${s}×${c})`,
+                };
+              } finally {
+                R.disposeCanvas(outCanvas);
+              }
             }
             case `screenshot-annotate`: {
               let e = r.shapes || [];
@@ -8740,6 +9153,7 @@ endobj
       }) {
         let ue = Be[e],
           [de, fe] = a(150),
+          [cfSizeUnit, setCfSizeUnit] = a(`KB`),
           [pe, me] = a(`image/webp`),
           [E, D] = a(82),
           [ge, _e] = a(!0),
@@ -8840,57 +9254,89 @@ endobj
           [dr, fr] = a(``),
           [pr, mr] = a([]),
           [hr, gr] = a([]),
-          [_r, vr] = a(null);
+          [_r, vr] = a(null),
+          [cfBgMode, setCfBgMode] = a(`solid`),
+          [cfBgSolid, setCfBgSolid] = a(`#FFFFFF`),
+          [cfBgGradType, setCfBgGradType] = a(`linear`),
+          [cfBgGradAngle, setCfBgGradAngle] = a(135),
+          [cfBgGrad1, setCfBgGrad1] = a(`#2563EB`),
+          [cfBgGrad2, setCfBgGrad2] = a(`#9333EA`),
+          [cfBgGrad3, setCfBgGrad3] = a(`#EC4899`),
+          [cfBgGradUse3, setCfBgGradUse3] = a(!1),
+          [cfBgMix1, setCfBgMix1] = a(`#0F172A`),
+          [cfBgMix2, setCfBgMix2] = a(`#2563EB`),
+          [cfBgMix3, setCfBgMix3] = a(`#EC4899`),
+          [cfBgMix4, setCfBgMix4] = a(`#10B981`),
+          [cfBgMixStyle, setCfBgMixStyle] = a(`mesh`),
+          [cfBgMixSpread, setCfBgMixSpread] = a(78),
+          [cfBgImgBlob, setCfBgImgBlob] = a(null),
+          [cfBgImgName, setCfBgImgName] = a(``),
+          [cfBgImgPreview, setCfBgImgPreview] = a(``),
+          [cfBgImgFit, setCfBgImgFit] = a(`cover`),
+          [cfBgImgBlur, setCfBgImgBlur] = a(0),
+          [cfBgFormat, setCfBgFormat] = a(`image/png`),
+          [cfDetectedAlpha, setCfDetectedAlpha] = a(!1);
         (n(() => {
           t && (I(t.width), De(t.height), gr([]));
         }, [t?.id, t?.width, t?.height]),
           n(() => {
             let n = !1;
-            return t
-              ? ((async () => {
-                  let r = await Z.readBlob(t.opfsCurrentPath);
-                  if (r && !n) {
-                    if (
-                      e === `exif-viewer` ||
-                      e === `exif-editor` ||
-                      e === `dpi-changer`
-                    ) {
-                      let e = new Uint8Array(await r.arrayBuffer());
-                      n || fn(pt(e));
-                    }
-                    if (
-                      e === `progressive-jpeg` ||
-                      e === `chroma-subsampling`
-                    ) {
-                      let e = new Uint8Array(await r.arrayBuffer());
-                      n || mn(yt(e));
-                    }
-                    if (e === `lqip-blurhash`) {
-                      let e = await Et(r);
-                      n || Bn(e);
-                    }
-                    if (e === `palette-extractor`) {
-                      let e = await Dt(r, 6);
-                      n || Hn(e);
-                    }
-                    if (e === `ascii-art`) {
-                      let e = await Ot(r, Gn, !1);
-                      n || Wn(e);
-                    }
-                    if (e === `base64-codec`) {
-                      let e = new FileReader();
-                      ((e.onload = () => {
-                        !n && typeof e.result == `string` && Rn(e.result);
-                      }),
-                        e.readAsDataURL(r));
-                    }
+            if (!t) {
+              setCfDetectedAlpha(!1);
+              return;
+            }
+            if (typeof t.hasTransparency === `boolean`) {
+              setCfDetectedAlpha(t.hasTransparency);
+            }
+            return (
+              (async () => {
+                let r = await Z.readBlob(t.opfsCurrentPath);
+                if (r && !n) {
+                  if (e === `transparent-bg`) {
+                    let hasA =
+                      typeof t.hasTransparency === `boolean`
+                        ? t.hasTransparency
+                        : await cfDetectBlobAlpha(r, t.name);
+                    n || setCfDetectedAlpha(hasA);
                   }
-                })().catch(() => {}),
-                () => {
-                  n = !0;
-                })
-              : void 0;
-          }, [e, t?.id, t?.opfsCurrentPath, Gn]));
+                  if (
+                    e === `exif-viewer` ||
+                    e === `exif-editor` ||
+                    e === `dpi-changer`
+                  ) {
+                    let e = new Uint8Array(await r.arrayBuffer());
+                    n || fn(pt(e));
+                  }
+                  if (e === `progressive-jpeg` || e === `chroma-subsampling`) {
+                    let e = new Uint8Array(await r.arrayBuffer());
+                    n || mn(yt(e));
+                  }
+                  if (e === `lqip-blurhash`) {
+                    let e = await Et(r);
+                    n || Bn(e);
+                  }
+                  if (e === `palette-extractor`) {
+                    let e = await Dt(r, 6);
+                    n || Hn(e);
+                  }
+                  if (e === `ascii-art`) {
+                    let e = await Ot(r, Gn, !1);
+                    n || Wn(e);
+                  }
+                  if (e === `base64-codec`) {
+                    let e = new FileReader();
+                    ((e.onload = () => {
+                      !n && typeof e.result == `string` && Rn(e.result);
+                    }),
+                      e.readAsDataURL(r));
+                  }
+                }
+              })().catch(() => {}),
+              () => {
+                n = !0;
+              }
+            );
+          }, [e, t?.id, t?.opfsCurrentPath, t?.hasTransparency, Gn]));
         let yr = async (e, t) => {
             try {
               (await navigator.clipboard.writeText(t),
@@ -8997,10 +9443,45 @@ endobj
                     children: [
                       T(`div`, {
                         children: [
-                          w(`label`, {
-                            htmlFor: `target-kb-input`,
-                            className: `block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1`,
-                            children: `Exact Max File Size (KB)`,
+                          T(`div`, {
+                            className: `flex items-center justify-between gap-2 mb-1`,
+                            children: [
+                              w(`label`, {
+                                htmlFor: `target-kb-input`,
+                                className: `text-xs font-medium text-slate-700 dark:text-slate-300`,
+                                children: `Exact Max File Size (${cfSizeUnit})`,
+                              }),
+                              T(`div`, {
+                                className: `cf-unit-switch`,
+                                children: [`KB`, `MB`].map((unit) =>
+                                  w(
+                                    `button`,
+                                    {
+                                      type: `button`,
+                                      onClick: () => {
+                                        if (unit === cfSizeUnit) return;
+                                        setCfSizeUnit(unit);
+                                        if (unit === `MB`) {
+                                          fe(
+                                            Math.max(
+                                              0.1,
+                                              Number((de / 1024).toFixed(2)),
+                                            ),
+                                          );
+                                        } else {
+                                          fe(
+                                            Math.max(1, Math.round(de * 1024)),
+                                          );
+                                        }
+                                      },
+                                      className: `cf-unit-btn ${cfSizeUnit === unit ? `cf-unit-btn-active` : ``}`,
+                                      children: unit,
+                                    },
+                                    unit,
+                                  ),
+                                ),
+                              }),
+                            ],
                           }),
                           T(`div`, {
                             className: `flex items-center gap-2`,
@@ -9008,24 +9489,37 @@ endobj
                               w(`input`, {
                                 id: `target-kb-input`,
                                 type: `number`,
-                                min: 10,
-                                max: 10240,
+                                min: cfSizeUnit === `MB` ? 0.05 : 1,
+                                max: cfSizeUnit === `MB` ? 50 : 51200,
+                                step: cfSizeUnit === `MB` ? 0.1 : 1,
                                 value: de,
-                                onChange: (e) => fe(Number(e.target.value)),
+                                onChange: (e) =>
+                                  fe(
+                                    Math.max(
+                                      cfSizeUnit === `MB` ? 0.05 : 1,
+                                      Number(e.target.value) || 0,
+                                    ),
+                                  ),
                                 className: `flex-1 px-3 py-1.5 text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md`,
                               }),
                               w(`div`, {
                                 className: `flex gap-1`,
-                                children: [50, 150, 500].map((e) =>
+                                children: (cfSizeUnit === `MB`
+                                  ? [0.5, 1, 2]
+                                  : [50, 150, 500]
+                                ).map((val) =>
                                   T(
                                     `button`,
                                     {
                                       type: `button`,
-                                      onClick: () => fe(e),
+                                      onClick: () => fe(val),
                                       className: `px-2 py-1 text-[11px] font-mono bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded`,
-                                      children: [e, `K`],
+                                      children: [
+                                        val,
+                                        cfSizeUnit === `MB` ? `M` : `K`,
+                                      ],
                                     },
-                                    e,
+                                    val,
                                   ),
                                 ),
                               }),
@@ -9090,32 +9584,29 @@ endobj
                           }),
                         ],
                       }),
-                      T(`label`, {
-                        className: `flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300`,
-                        children: [
-                          w(`input`, {
-                            type: `checkbox`,
-                            checked: ge,
-                            onChange: (e) => _e(e.target.checked),
-                          }),
-                          w(`span`, {
-                            children: `Auto-downscale resolution if quality floor is reached`,
-                          }),
-                        ],
-                      }),
+                      null,
                       w(`button`, {
                         type: `button`,
                         disabled: !t || i,
-                        onClick: () =>
+                        onClick: () => {
+                          let targetBytes = Math.max(
+                            1024,
+                            Math.floor(
+                              Number(de) *
+                                (cfSizeUnit === `MB` ? 1048576 : 1024),
+                            ),
+                          );
                           $(`target-size`, {
-                            targetKb: de,
+                            targetKb: Math.round(targetBytes / 1024),
+                            targetBytes,
                             format: pe,
-                            allowDownscale: ge,
-                          }),
+                            allowDownscale: !0,
+                          });
+                        },
                         className: `w-full py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 rounded-lg`,
                         children: i
-                          ? `Solving binary search...`
-                          : `Compress Under ${de} KB`,
+                          ? `Solving exact target size...`
+                          : `Compress Under ${de} ${cfSizeUnit}`,
                       }),
                     ],
                   }),
@@ -10874,6 +11365,535 @@ endobj
                       }),
                     ],
                   }),
+                e === `transparent-bg` &&
+                  (() => {
+                    let isUnlocked = Boolean(
+                        t &&
+                        (typeof t.hasTransparency === `boolean`
+                          ? t.hasTransparency
+                          : cfDetectedAlpha),
+                      ),
+                      previewStyle =
+                        cfBgMode === `solid`
+                          ? { background: cfBgSolid }
+                          : cfBgMode === `gradient`
+                            ? {
+                                background:
+                                  cfBgGradType === `radial`
+                                    ? `radial-gradient(circle, ${cfBgGrad1}, ${cfBgGradUse3 ? `${cfBgGrad2}, ${cfBgGrad3}` : cfBgGrad2})`
+                                    : `linear-gradient(${cfBgGradAngle}deg, ${cfBgGrad1}, ${cfBgGradUse3 ? `${cfBgGrad2}, ${cfBgGrad3}` : cfBgGrad2})`,
+                              }
+                            : cfBgMode === `mix`
+                              ? {
+                                  backgroundColor: cfBgMix1,
+                                  backgroundImage: `radial-gradient(circle at 15% 20%, ${cfBgMix2}, transparent 65%), radial-gradient(circle at 85% 20%, ${cfBgMix3}, transparent 65%), radial-gradient(circle at 75% 85%, ${cfBgMix4}, transparent 65%)`,
+                                }
+                              : cfBgImgPreview
+                                ? {
+                                    backgroundImage: `url(${cfBgImgPreview})`,
+                                    backgroundSize:
+                                      cfBgImgFit === `stretch`
+                                        ? `100% 100%`
+                                        : cfBgImgFit,
+                                    backgroundPosition: `center`,
+                                    backgroundRepeat: `no-repeat`,
+                                  }
+                                : {};
+                    if (!isUnlocked) {
+                      return T(`div`, {
+                        className: `cf-tbg-lock space-y-2`,
+                        "data-testid": `transparent-bg-locked`,
+                        children: [
+                          w(`div`, {
+                            className: `text-lg`,
+                            children: `🔒`,
+                          }),
+                          w(`p`, {
+                            className: `text-xs font-bold text-slate-900 dark:text-slate-100`,
+                            children: `Locked — Transparent Media Required`,
+                          }),
+                          w(`p`, {
+                            className: `text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed`,
+                            children: t
+                              ? `"${t.name}" does not have a transparent background. Select a transparent PNG/WebP/GIF image (or remove its background via Chroma Key) to unlock custom backgrounds.`
+                              : `Upload and select a transparent-background image to unlock Solid, Gradient, Mix Colors, and Custom Image backgrounds.`,
+                          }),
+                        ],
+                      });
+                    }
+                    let galleryCandidates = r.filter(
+                      (item) => item.id !== t?.id,
+                    );
+                    return T(`div`, {
+                      className: `space-y-3`,
+                      "data-testid": `transparent-bg-studio`,
+                      children: [
+                        T(`div`, {
+                          className: `cf-tbg-unlocked-pill`,
+                          children: [
+                            w(`span`, {
+                              children: `🔓 Transparent Alpha Detected`,
+                            }),
+                            w(`span`, { children: `Unlocked` }),
+                          ],
+                        }),
+                        w(`div`, {
+                          className: `cf-tbg-preview studio-checkerboard`,
+                          style: previewStyle,
+                        }),
+                        w(`div`, {
+                          className: `grid grid-cols-2 gap-1.5`,
+                          children: [
+                            [`solid`, `Normal Color`],
+                            [`gradient`, `Gradient`],
+                            [`mix`, `Mix Colors`],
+                            [`image`, `Image / Gallery`],
+                          ].map(([mId, label]) =>
+                            w(
+                              `button`,
+                              {
+                                type: `button`,
+                                onClick: () => setCfBgMode(mId),
+                                className: `py-1.5 text-xs rounded border ${cfBgMode === mId ? `border-blue-600 bg-blue-50 dark:bg-blue-950/50 font-semibold text-blue-600 dark:text-blue-400` : `border-slate-200 dark:border-slate-800`}`,
+                                children: label,
+                              },
+                              mId,
+                            ),
+                          ),
+                        }),
+                        cfBgMode === `solid` &&
+                          T(`div`, {
+                            className: `space-y-2.5`,
+                            children: [
+                              w(`div`, {
+                                className: `flex flex-wrap gap-1.5`,
+                                children: [
+                                  `#FFFFFF`,
+                                  `#0F172A`,
+                                  `#F8FAFC`,
+                                  `#2563EB`,
+                                  `#10B981`,
+                                  `#F59E0B`,
+                                  `#EF4444`,
+                                  `#8B5CF6`,
+                                  `#EC4899`,
+                                ].map((hex) =>
+                                  w(
+                                    `button`,
+                                    {
+                                      type: `button`,
+                                      onClick: () => setCfBgSolid(hex),
+                                      title: hex,
+                                      className: `cf-tbg-swatch`,
+                                      style: {
+                                        background: hex,
+                                        outline:
+                                          cfBgSolid.toLowerCase() ===
+                                          hex.toLowerCase()
+                                            ? `2px solid #2563EB`
+                                            : `none`,
+                                      },
+                                    },
+                                    hex,
+                                  ),
+                                ),
+                              }),
+                              T(`div`, {
+                                className: `flex items-center gap-2`,
+                                children: [
+                                  w(`input`, {
+                                    type: `color`,
+                                    value: cfBgSolid,
+                                    onChange: (ev) =>
+                                      setCfBgSolid(ev.target.value),
+                                    className: `w-9 h-8 rounded cursor-pointer`,
+                                  }),
+                                  w(`input`, {
+                                    type: `text`,
+                                    value: cfBgSolid,
+                                    onChange: (ev) =>
+                                      setCfBgSolid(ev.target.value),
+                                    placeholder: `#FFFFFF`,
+                                    className: `flex-1 px-2.5 py-1.5 text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md`,
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                        cfBgMode === `gradient` &&
+                          T(`div`, {
+                            className: `space-y-2.5`,
+                            children: [
+                              w(`div`, {
+                                className: `grid grid-cols-2 gap-1.5`,
+                                children: [`linear`, `radial`].map((gt) =>
+                                  w(
+                                    `button`,
+                                    {
+                                      type: `button`,
+                                      onClick: () => setCfBgGradType(gt),
+                                      className: `py-1 text-xs capitalize rounded border ${cfBgGradType === gt ? `border-blue-600 bg-blue-50 dark:bg-blue-950/50 font-semibold` : `border-slate-200 dark:border-slate-800`}`,
+                                      children: gt,
+                                    },
+                                    gt,
+                                  ),
+                                ),
+                              }),
+                              cfBgGradType === `linear` &&
+                                T(`div`, {
+                                  children: [
+                                    T(`div`, {
+                                      className: `flex justify-between text-xs`,
+                                      children: [
+                                        w(`span`, { children: `Angle` }),
+                                        w(`span`, {
+                                          className: `font-mono`,
+                                          children: `${cfBgGradAngle}°`,
+                                        }),
+                                      ],
+                                    }),
+                                    w(`input`, {
+                                      type: `range`,
+                                      min: 0,
+                                      max: 360,
+                                      value: cfBgGradAngle,
+                                      onChange: (ev) =>
+                                        setCfBgGradAngle(
+                                          Number(ev.target.value),
+                                        ),
+                                      className: `w-full`,
+                                    }),
+                                  ],
+                                }),
+                              T(`div`, {
+                                className: `flex items-center justify-between gap-2 text-xs`,
+                                children: [
+                                  T(`label`, {
+                                    className: `flex items-center gap-1`,
+                                    children: [
+                                      w(`span`, { children: `C1` }),
+                                      w(`input`, {
+                                        type: `color`,
+                                        value: cfBgGrad1,
+                                        onChange: (ev) =>
+                                          setCfBgGrad1(ev.target.value),
+                                      }),
+                                    ],
+                                  }),
+                                  T(`label`, {
+                                    className: `flex items-center gap-1`,
+                                    children: [
+                                      w(`span`, { children: `C2` }),
+                                      w(`input`, {
+                                        type: `color`,
+                                        value: cfBgGrad2,
+                                        onChange: (ev) =>
+                                          setCfBgGrad2(ev.target.value),
+                                      }),
+                                    ],
+                                  }),
+                                  cfBgGradUse3 &&
+                                    T(`label`, {
+                                      className: `flex items-center gap-1`,
+                                      children: [
+                                        w(`span`, { children: `C3` }),
+                                        w(`input`, {
+                                          type: `color`,
+                                          value: cfBgGrad3,
+                                          onChange: (ev) =>
+                                            setCfBgGrad3(ev.target.value),
+                                        }),
+                                      ],
+                                    }),
+                                ],
+                              }),
+                              T(`label`, {
+                                className: `flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300`,
+                                children: [
+                                  w(`input`, {
+                                    type: `checkbox`,
+                                    checked: cfBgGradUse3,
+                                    onChange: (ev) =>
+                                      setCfBgGradUse3(ev.target.checked),
+                                  }),
+                                  w(`span`, {
+                                    children: `Enable 3-stop custom gradient`,
+                                  }),
+                                ],
+                              }),
+                              w(`div`, {
+                                className: `flex flex-wrap gap-1.5`,
+                                children: [
+                                  [`Sunset`, `#F97316`, `#EC4899`, `#7C3AED`],
+                                  [`Ocean`, `#0EA5E9`, `#2563EB`, `#1E3A8A`],
+                                  [`Mint`, `#10B981`, `#06B6D4`, `#3B82F6`],
+                                  [`Midnight`, `#0F172A`, `#1E293B`, `#334155`],
+                                ].map(([name, c1, c2, c3]) =>
+                                  w(
+                                    `button`,
+                                    {
+                                      type: `button`,
+                                      onClick: () => {
+                                        setCfBgGrad1(c1);
+                                        setCfBgGrad2(c2);
+                                        setCfBgGrad3(c3);
+                                        setCfBgGradUse3(!0);
+                                      },
+                                      className: `px-2 py-1 text-[10px] font-semibold rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950`,
+                                      children: name,
+                                    },
+                                    name,
+                                  ),
+                                ),
+                              }),
+                            ],
+                          }),
+                        cfBgMode === `mix` &&
+                          T(`div`, {
+                            className: `space-y-2.5`,
+                            children: [
+                              w(`div`, {
+                                className: `grid grid-cols-3 gap-1.5`,
+                                children: [
+                                  [`mesh`, `Mesh`],
+                                  [`aurora`, `Aurora`],
+                                  [`diagonal`, `Diagonal`],
+                                ].map(([st, lbl]) =>
+                                  w(
+                                    `button`,
+                                    {
+                                      type: `button`,
+                                      onClick: () => setCfBgMixStyle(st),
+                                      className: `py-1 text-xs rounded border ${cfBgMixStyle === st ? `border-blue-600 bg-blue-50 dark:bg-blue-950/50 font-semibold` : `border-slate-200 dark:border-slate-800`}`,
+                                      children: lbl,
+                                    },
+                                    st,
+                                  ),
+                                ),
+                              }),
+                              T(`div`, {
+                                className: `grid grid-cols-2 gap-2 text-xs`,
+                                children: [
+                                  [`Base`, cfBgMix1, setCfBgMix1],
+                                  [`Mix 2`, cfBgMix2, setCfBgMix2],
+                                  [`Mix 3`, cfBgMix3, setCfBgMix3],
+                                  [`Mix 4`, cfBgMix4, setCfBgMix4],
+                                ].map(([lbl, val, setter]) =>
+                                  T(
+                                    `label`,
+                                    {
+                                      className: `flex items-center justify-between px-2 py-1 rounded border border-slate-200 dark:border-slate-800`,
+                                      children: [
+                                        w(`span`, { children: lbl }),
+                                        w(`input`, {
+                                          type: `color`,
+                                          value: val,
+                                          onChange: (ev) =>
+                                            setter(ev.target.value),
+                                        }),
+                                      ],
+                                    },
+                                    lbl,
+                                  ),
+                                ),
+                              }),
+                              T(`div`, {
+                                children: [
+                                  T(`div`, {
+                                    className: `flex justify-between text-xs`,
+                                    children: [
+                                      w(`span`, { children: `Blend Spread` }),
+                                      w(`span`, {
+                                        className: `font-mono`,
+                                        children: `${cfBgMixSpread}%`,
+                                      }),
+                                    ],
+                                  }),
+                                  w(`input`, {
+                                    type: `range`,
+                                    min: 35,
+                                    max: 120,
+                                    value: cfBgMixSpread,
+                                    onChange: (ev) =>
+                                      setCfBgMixSpread(Number(ev.target.value)),
+                                    className: `w-full`,
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                        cfBgMode === `image` &&
+                          T(`div`, {
+                            className: `space-y-2.5`,
+                            children: [
+                              w(`button`, {
+                                type: `button`,
+                                onClick: async () => {
+                                  let picked = await cfTriggerInputPicker({
+                                    accept: `image/*`,
+                                    multiple: !1,
+                                  });
+                                  let file = picked[0];
+                                  if (!file || !cfIsStrictImageFile(file))
+                                    return;
+                                  setCfBgImgBlob(file);
+                                  setCfBgImgName(file.name);
+                                  let reader = new FileReader();
+                                  reader.onload = () => {
+                                    if (typeof reader.result === `string`)
+                                      setCfBgImgPreview(reader.result);
+                                  };
+                                  reader.readAsDataURL(file);
+                                },
+                                className: `w-full py-2 px-3 text-xs font-semibold rounded-lg border border-dashed border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/30`,
+                                children: cfBgImgName
+                                  ? `📁 Change BG: ${cfBgImgName}`
+                                  : `📁 Upload Custom Image Background`,
+                              }),
+                              galleryCandidates.length > 0 &&
+                                T(`div`, {
+                                  className: `space-y-1`,
+                                  children: [
+                                    w(`p`, {
+                                      className: `text-[11px] font-medium text-slate-500`,
+                                      children: `Or pick from your loaded gallery:`,
+                                    }),
+                                    w(`div`, {
+                                      className: `flex gap-1.5 overflow-x-auto pb-1`,
+                                      children: galleryCandidates.map((item) =>
+                                        w(
+                                          `button`,
+                                          {
+                                            type: `button`,
+                                            onClick: async () => {
+                                              let b = await Z.readBlob(
+                                                item.opfsCurrentPath,
+                                              );
+                                              if (!b) return;
+                                              setCfBgImgBlob(b);
+                                              setCfBgImgName(item.name);
+                                              setCfBgImgPreview(
+                                                item.thumbUrl ||
+                                                  item.previewUrl,
+                                              );
+                                            },
+                                            title: item.name,
+                                            className: `w-11 h-11 shrink-0 rounded overflow-hidden border ${cfBgImgName === item.name ? `border-blue-600` : `border-slate-200 dark:border-slate-700`} studio-checkerboard`,
+                                            children: w(`img`, {
+                                              src:
+                                                item.thumbUrl ||
+                                                item.previewUrl,
+                                              alt: item.name,
+                                              className: `w-full h-full object-contain`,
+                                            }),
+                                          },
+                                          item.id,
+                                        ),
+                                      ),
+                                    }),
+                                  ],
+                                }),
+                              w(`div`, {
+                                className: `grid grid-cols-3 gap-1.5`,
+                                children: [`cover`, `contain`, `stretch`].map(
+                                  (fit) =>
+                                    w(
+                                      `button`,
+                                      {
+                                        type: `button`,
+                                        onClick: () => setCfBgImgFit(fit),
+                                        className: `py-1 text-xs capitalize rounded border ${cfBgImgFit === fit ? `border-blue-600 bg-blue-50 dark:bg-blue-950/50 font-semibold` : `border-slate-200 dark:border-slate-800`}`,
+                                        children: fit,
+                                      },
+                                      fit,
+                                    ),
+                                ),
+                              }),
+                              T(`div`, {
+                                children: [
+                                  T(`div`, {
+                                    className: `flex justify-between text-xs`,
+                                    children: [
+                                      w(`span`, { children: `Backdrop Blur` }),
+                                      w(`span`, {
+                                        className: `font-mono`,
+                                        children: `${cfBgImgBlur}px`,
+                                      }),
+                                    ],
+                                  }),
+                                  w(`input`, {
+                                    type: `range`,
+                                    min: 0,
+                                    max: 24,
+                                    value: cfBgImgBlur,
+                                    onChange: (ev) =>
+                                      setCfBgImgBlur(Number(ev.target.value)),
+                                    className: `w-full`,
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                        T(`div`, {
+                          children: [
+                            w(`label`, {
+                              className: `block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1`,
+                              children: `Output Format`,
+                            }),
+                            T(`select`, {
+                              value: cfBgFormat,
+                              onChange: (ev) => setCfBgFormat(ev.target.value),
+                              className: `w-full px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md`,
+                              children: [
+                                w(`option`, {
+                                  value: `image/png`,
+                                  children: `PNG (Lossless)`,
+                                }),
+                                w(`option`, {
+                                  value: `image/webp`,
+                                  children: `WebP (High Quality)`,
+                                }),
+                                w(`option`, {
+                                  value: `image/jpeg`,
+                                  children: `JPEG (Compact)`,
+                                }),
+                              ],
+                            }),
+                          ],
+                        }),
+                        w(`button`, {
+                          type: `button`,
+                          disabled:
+                            !t || i || (cfBgMode === `image` && !cfBgImgBlob),
+                          onClick: () =>
+                            $(`transparent-bg`, {
+                              bgMode: cfBgMode,
+                              solidColor: cfBgSolid,
+                              gradType: cfBgGradType,
+                              gradAngle: cfBgGradAngle,
+                              gradC1: cfBgGrad1,
+                              gradC2: cfBgGrad2,
+                              gradC3: cfBgGrad3,
+                              gradUse3: cfBgGradUse3,
+                              mixC1: cfBgMix1,
+                              mixC2: cfBgMix2,
+                              mixC3: cfBgMix3,
+                              mixC4: cfBgMix4,
+                              mixStyle: cfBgMixStyle,
+                              mixSpread: cfBgMixSpread,
+                              bgBlob: cfBgImgBlob,
+                              bgFit: cfBgImgFit,
+                              bgBlur: cfBgImgBlur,
+                              format: cfBgFormat,
+                            }),
+                          className: `w-full py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 rounded-lg`,
+                          children: i
+                            ? `Compositing background...`
+                            : `Apply Custom Background`,
+                        }),
+                      ],
+                    });
+                  })(),
                 e === `screenshot-annotate` &&
                   T(`div`, {
                     className: `space-y-3`,
@@ -12611,6 +13631,17 @@ endobj
           [sheetMinimized, setSheetMinimized] = a(!1),
           [sheetDragY, setSheetDragY] = a(0),
           [importProgress, setImportProgress] = a(null),
+          [uploadError, setUploadError] = a(``),
+          [uploadErrorTimerRef] = a(() => ({ current: null })),
+          cfShowUploadError = t((msg) => {
+            setUploadError(msg);
+            if (uploadErrorTimerRef.current)
+              clearTimeout(uploadErrorTimerRef.current);
+            uploadErrorTimerRef.current = setTimeout(
+              () => setUploadError(``),
+              7000,
+            );
+          }, []),
           [galleryItems, setGalleryItems] = a([]),
           [gallerySelected, setGallerySelected] = a([]),
           [desktopMediaModal, setDesktopMediaModal] = a(null),
@@ -12748,6 +13779,7 @@ endobj
                     formatExt: ext,
                     playable: meta.playable,
                     duration: meta.duration || 0,
+                    hasTransparency: !!meta.hasTransparency,
                     width: meta.width,
                     height: meta.height,
                     originalBytes: blob.size,
@@ -12794,8 +13826,15 @@ endobj
           ),
           cfIngestMany = t(
             async (files, source = `upload`) => {
-              let list = Array.from(files || []).filter(Boolean);
-              if (!list.length) return [];
+              let rawList = Array.from(files || []).filter(Boolean);
+              if (!rawList.length) return [];
+              let { valid: list, blocked } = cfSplitValidImages(rawList);
+              if (!list.length) {
+                let errMsg = cfFormatBlockedError(blocked, 0);
+                cfShowUploadError(errMsg);
+                g(errMsg);
+                return [];
+              }
               m(!0);
               setImportProgress({ done: 0, total: list.length });
               let created = [],
@@ -12809,7 +13848,7 @@ endobj
                       file = list[idx],
                       res = await N(
                         file,
-                        file.name || `media-${idx + 1}`,
+                        file.name || `image-${idx + 1}`,
                         source,
                         idx === 0,
                         !0,
@@ -12831,16 +13870,23 @@ endobj
                 );
                 R.enforceBudget();
                 await M();
-                g(
-                  `Imported ${created.length} media file(s) with active RAM governance`,
-                );
+                if (blocked.length > 0) {
+                  let warnMsg = cfFormatBlockedError(blocked, created.length);
+                  cfShowUploadError(warnMsg);
+                  g(warnMsg);
+                } else {
+                  setUploadError(``);
+                  g(
+                    `Imported ${created.length} image(s) with active RAM governance`,
+                  );
+                }
                 return created;
               } finally {
                 setImportProgress(null);
                 m(!1);
               }
             },
-            [N, M],
+            [N, M, cfShowUploadError],
           ),
           Ce = t(async () => {
             m(!0);
@@ -12886,23 +13932,33 @@ endobj
                 c = R.createManagedBlobUrl(`${e.id}-cur`, t, !0),
                 l = e.historyIds.slice(0, e.historyIndex + 1);
               l.push(s);
-              let d = `${e.name.replace(/\.[^.]+$/, ``)}.${i}`;
-              (u((i) =>
-                i.map((i) =>
-                  i.id === e.id
+              let d = `${e.name.replace(/\.[^.]+$/, ``)}.${i}`,
+                nextMeta = await cfInspectMedia(t, d),
+                nextThumb = nextMeta.thumbBlob
+                  ? R.createManagedBlobUrl(
+                      `${e.id}-thumb`,
+                      nextMeta.thumbBlob,
+                      !1,
+                    )
+                  : e.thumbUrl;
+              (u((items) =>
+                items.map((item) =>
+                  item.id === e.id
                     ? {
-                        ...i,
+                        ...item,
                         name: d,
-                        mimeType: t.type || i.mimeType,
+                        mimeType: t.type || item.mimeType,
                         width: n,
                         height: r,
+                        hasTransparency: !!nextMeta.hasTransparency,
                         currentBytes: t.size,
                         opfsCurrentPath: s,
+                        thumbUrl: nextThumb,
                         previewUrl: c,
                         historyIds: l,
                         historyIndex: l.length - 1,
                       }
-                    : i,
+                    : item,
                 ),
               ),
                 g(a),
@@ -12918,23 +13974,30 @@ endobj
               if (!r) return;
               let i = await q(r, e.name),
                 a = i.width,
-                o = i.height;
+                o = i.height,
+                hasTransparency = cfHasAlphaTransparency(i, a, o),
+                thumbBlob = await cfMakeMicroThumbBlob(i, a, o, 180);
               i.close();
-              let s = R.createManagedBlobUrl(`${e.id}-cur`, r, !0);
-              (u((i) =>
-                i.map((i) =>
-                  i.id === e.id
+              let s = R.createManagedBlobUrl(`${e.id}-cur`, r, !0),
+                nextThumb = thumbBlob
+                  ? R.createManagedBlobUrl(`${e.id}-thumb`, thumbBlob, !1)
+                  : e.thumbUrl;
+              (u((items) =>
+                items.map((item) =>
+                  item.id === e.id
                     ? {
-                        ...i,
+                        ...item,
                         width: a,
                         height: o,
+                        hasTransparency,
                         currentBytes: r.size,
-                        mimeType: r.type || i.mimeType,
+                        mimeType: r.type || item.mimeType,
                         opfsCurrentPath: n,
+                        thumbUrl: nextThumb,
                         previewUrl: s,
                         historyIndex: t,
                       }
-                    : i,
+                    : item,
                 ),
               ),
                 g(`Restored OPFS revision ${t + 1} of ${e.historyIds.length}`),
@@ -12946,19 +14009,16 @@ endobj
           let e = async (e) => {
               let t = e.clipboardData?.items;
               if (t) {
+                let pastedFiles = [];
                 for (let n of Array.from(t))
-                  if (n.type.startsWith(`image/`)) {
-                    let t = n.getAsFile();
-                    t &&
-                      (e.preventDefault(),
-                      await N(
-                        t,
-                        `clipboard-${Date.now()}.png`,
-                        `clipboard`,
-                        !0,
-                      ),
-                      g(`Pasted image from clipboard into OPFS vault`));
+                  if (n.kind === `file`) {
+                    let f = n.getAsFile();
+                    f && pastedFiles.push(f);
                   }
+                if (pastedFiles.length > 0) {
+                  e.preventDefault();
+                  await cfIngestMany(pastedFiles, `clipboard`);
+                }
               }
             },
             t = (e) => {
@@ -13004,7 +14064,14 @@ endobj
             }
           },
           cfBrowseDeviceGallery = async () => {
-            let files = await cfPickGalleryFiles();
+            let rawFiles = await cfPickGalleryFiles();
+            if (!rawFiles.length) return;
+            let { valid: files, blocked } = cfSplitValidImages(rawFiles);
+            if (blocked.length > 0) {
+              let errMsg = cfFormatBlockedError(blocked, files.length);
+              cfShowUploadError(errMsg);
+              g(errMsg);
+            }
             if (!files.length) return;
             let staged = [];
             for (let idx = 0; idx < files.length; idx++) {
@@ -13021,7 +14088,7 @@ endobj
                 id: gid,
                 assetId: null,
                 file,
-                name: file.name || `media-${idx + 1}`,
+                name: file.name || `image-${idx + 1}`,
                 size: file.size,
                 mediaKind: meta.mediaKind,
                 formatExt: cfSafeExt(file.name, file.type),
@@ -13154,7 +14221,7 @@ endobj
                   let i = await Z.readBlob(r.opfsCurrentPath);
                   if (!i) continue;
                   let a =
-                      e.maxKb > 0 && e.format !== `image/png`
+                      e.maxKb > 0
                         ? await St(i, e.maxKb * 1024, e.format, !0)
                         : await Ct(i, r.name, `quality-slider`, {
                             format: e.format,
@@ -13263,6 +14330,27 @@ endobj
                             isPortrait && setPortraitSheet(`controls`));
                         },
                       }),
+                      cfRemoveAsset = async (id) => {
+                        let target = l.find((item) => item.id === id);
+                        if (target) {
+                          R.release(`${id}-orig`);
+                          R.release(`${id}-cur`);
+                          R.release(`${id}-thumb`);
+                          let paths = new Set([
+                            target.opfsOriginalPath,
+                            ...target.historyIds,
+                          ]);
+                          for (let path of paths) await Z.deleteFile(path);
+                          u((prev) => {
+                            let next = prev.filter((item) => item.id !== id);
+                            return (d === id && f(next[0]?.id ?? null), next);
+                          });
+                          setGalleryItems((prev) =>
+                            prev.filter((gItem) => gItem.assetId !== id),
+                          );
+                          await M();
+                        }
+                      },
                       stagePanel = w(Ie, {
                         assets: l,
                         activeAsset: j,
@@ -13271,30 +14359,15 @@ endobj
                         darkMode: s,
                         onToggleDarkMode: () => c((e) => !e),
                         onSelectAsset: f,
-                        onRemoveAsset: async (id) => {
-                          let target = l.find((item) => item.id === id);
-                          if (target) {
-                            R.release(`${id}-orig`);
-                            R.release(`${id}-cur`);
-                            R.release(`${id}-thumb`);
-                            let paths = new Set([
-                              target.opfsOriginalPath,
-                              ...target.historyIds,
-                            ]);
-                            for (let path of paths) await Z.deleteFile(path);
-                            u((prev) => {
-                              let next = prev.filter((item) => item.id !== id);
-                              return (d === id && f(next[0]?.id ?? null), next);
-                            });
-                            await M();
-                          }
-                        },
+                        onRemoveAsset: cfRemoveAsset,
                         onOpenFiles: F,
                         onMountFolder: I,
                         onOpenGallery: () => openMediaDrawer(`gallery`),
                         onOpenMediaView: () => openMediaDrawer(`media-view`),
                         isPortrait,
                         importProgress,
+                        uploadError,
+                        onDismissUploadError: () => setUploadError(``),
                         onLoadSamples: Ce,
                         onDropFiles: async (files) => {
                           await cfIngestMany(files, `upload`);
@@ -13440,7 +14513,7 @@ endobj
                                               alt: item.name,
                                               loading: `lazy`,
                                               decoding: `async`,
-                                              className: `w-full h-full object-cover`,
+                                              className: `w-full h-full object-contain`,
                                             }),
                                             item.mediaKind === `video` &&
                                               w(`span`, {
@@ -13511,15 +14584,28 @@ endobj
                               children: l.map((item) => {
                                 let isActive = j?.id === item.id;
                                 return T(
-                                  `button`,
+                                  `div`,
                                   {
-                                    type: `button`,
+                                    role: `button`,
+                                    tabIndex: 0,
                                     "data-testid": `media-view-item-${item.id}`,
                                     onClick: () => {
                                       f(item.id);
                                       setPortraitSheet(null);
                                       setDesktopMediaModal(null);
                                       setSheetMinimized(!1);
+                                    },
+                                    onKeyDown: (ev) => {
+                                      if (
+                                        ev.key === `Enter` ||
+                                        ev.key === ` `
+                                      ) {
+                                        ev.preventDefault();
+                                        f(item.id);
+                                        setPortraitSheet(null);
+                                        setDesktopMediaModal(null);
+                                        setSheetMinimized(!1);
+                                      }
                                     },
                                     className: `cf-gallery-card ${isActive ? `cf-gallery-card-selected` : ``}`,
                                     children: [
@@ -13528,15 +14614,40 @@ endobj
                                         alt: item.name,
                                         loading: `lazy`,
                                         decoding: `async`,
-                                        className: `w-full h-full object-cover`,
+                                        className: `w-full h-full object-contain`,
                                       }),
-                                      item.mediaKind === `video` &&
-                                        w(`span`, {
-                                          className: `cf-video-badge`,
-                                          children: w(cfFilm, {
-                                            className: `w-2.5 h-2.5`,
-                                          }),
+                                      w(`button`, {
+                                        type: `button`,
+                                        "data-testid": `media-view-delete-${item.id}`,
+                                        "aria-label": `Delete ${item.name}`,
+                                        title: `Delete ${item.name}`,
+                                        onClick: (ev) => {
+                                          ev.stopPropagation();
+                                          cfRemoveAsset(item.id);
+                                        },
+                                        className: `cf-gallery-delete`,
+                                        children: w(`svg`, {
+                                          viewBox: `0 0 24 24`,
+                                          fill: `none`,
+                                          stroke: `currentColor`,
+                                          strokeWidth: `2`,
+                                          strokeLinecap: `round`,
+                                          strokeLinejoin: `round`,
+                                          style: {
+                                            width: `13px`,
+                                            height: `13px`,
+                                          },
+                                          children: [
+                                            w(`path`, { d: `M3 6h18` }),
+                                            w(`path`, {
+                                              d: `M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6`,
+                                            }),
+                                            w(`path`, {
+                                              d: `M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2`,
+                                            }),
+                                          ],
                                         }),
+                                      }),
                                       isActive &&
                                         w(`span`, {
                                           className: `cf-gallery-check cf-gallery-check-on`,
@@ -13692,46 +14803,26 @@ endobj
                                   }),
                               ],
                             }),
-                            focusMode
-                              ? w(`button`, {
+                            T(`nav`, {
+                              "data-testid": `mobile-bottom-dock`,
+                              className: `cf-bottom-dock border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 grid grid-cols-2 gap-1.5 px-2 py-1.5`,
+                              children: [
+                                w(`button`, {
                                   type: `button`,
-                                  onClick: () => setFocusMode(!1),
-                                  className: `fixed bottom-3 right-3 z-20 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xl`,
-                                  children: `Show Dock`,
-                                })
-                              : T(`nav`, {
-                                  "data-testid": `mobile-bottom-dock`,
-                                  className: `cf-bottom-dock border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 grid grid-cols-3 gap-1.5 px-2 py-1.5`,
-                                  children: [
-                                    w(`button`, {
-                                      type: `button`,
-                                      "data-testid": `dock-tools-btn`,
-                                      onClick: () =>
-                                        openPortraitDrawer(`tools`),
-                                      className: `rounded-md text-xs font-semibold border transition-colors ${portraitSheet === `tools` ? `bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900` : `bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`}`,
-                                      children: `Tools (80)`,
-                                    }),
-                                    w(`button`, {
-                                      type: `button`,
-                                      "data-testid": `dock-controls-btn`,
-                                      onClick: () =>
-                                        openPortraitDrawer(`controls`),
-                                      className: `rounded-md text-xs font-semibold border transition-colors ${portraitSheet === `controls` ? `bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900` : `bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`}`,
-                                      children: `Controls`,
-                                    }),
-                                    w(`button`, {
-                                      type: `button`,
-                                      "data-testid": `dock-focus-btn`,
-                                      onClick: () => {
-                                        (setPortraitSheet(null),
-                                          setSheetMinimized(!1),
-                                          setFocusMode(!0));
-                                      },
-                                      className: `rounded-md text-xs font-semibold border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`,
-                                      children: `Focus`,
-                                    }),
-                                  ],
+                                  "data-testid": `dock-tools-btn`,
+                                  onClick: () => openPortraitDrawer(`tools`),
+                                  className: `rounded-md text-xs font-semibold border transition-colors ${portraitSheet === `tools` ? `bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900` : `bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`}`,
+                                  children: `Tools (81)`,
                                 }),
+                                w(`button`, {
+                                  type: `button`,
+                                  "data-testid": `dock-controls-btn`,
+                                  onClick: () => openPortraitDrawer(`controls`),
+                                  className: `rounded-md text-xs font-semibold border transition-colors ${portraitSheet === `controls` ? `bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900` : `bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`}`,
+                                  children: `Controls`,
+                                }),
+                              ],
+                            }),
                           ],
                         })
                       : T(he, {
@@ -13744,42 +14835,18 @@ endobj
                               className: `flex-1 min-w-0 h-full flex flex-col relative overflow-hidden`,
                               children: [
                                 stagePanel,
-                                T(`div`, {
+                                w(`div`, {
                                   className: `absolute bottom-20 left-3 z-20 flex items-center gap-1.5`,
-                                  children: [
-                                    w(`button`, {
-                                      type: `button`,
-                                      onClick: () => {
-                                        (setFocusMode(!1),
-                                          setLeftDrawerOpen((v) => !v));
-                                      },
-                                      className: `px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 shadow-sm`,
-                                      children:
-                                        leftDrawerOpen && !focusMode
-                                          ? `◀ Hide Tools`
-                                          : `▶ Tools`,
-                                    }),
-                                    w(`button`, {
-                                      type: `button`,
-                                      onClick: () => setFocusMode((v) => !v),
-                                      className: `px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-300 dark:border-slate-700 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm`,
-                                      children: focusMode
-                                        ? `Exit Focus`
-                                        : `Focus`,
-                                    }),
-                                  ],
-                                }),
-                                w(`button`, {
-                                  type: `button`,
-                                  onClick: () => {
-                                    (setFocusMode(!1),
-                                      setRightDrawerOpen((v) => !v));
-                                  },
-                                  className: `absolute bottom-20 right-3 z-20 px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 shadow-sm`,
-                                  children:
-                                    rightDrawerOpen && !focusMode
-                                      ? `Hide Controls ▶`
-                                      : `◀ Controls`,
+                                  children: w(`button`, {
+                                    type: `button`,
+                                    onClick: () => {
+                                      setLeftDrawerOpen((v) => !v);
+                                    },
+                                    className: `px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 shadow-sm`,
+                                    children: leftDrawerOpen
+                                      ? `◀ Hide Tools`
+                                      : `▶ Tools`,
+                                  }),
                                 }),
                               ],
                             }),
@@ -16291,12 +17358,181 @@ endobj
         border-radius: 10px;
         overflow: hidden;
         border: 2px solid #e2e8f0;
-        background: #0f172a;
+        background-color: #f3f2ee;
+        background-image:
+          linear-gradient(45deg, #e5e4df 25%, #0000 25%),
+          linear-gradient(-45deg, #e5e4df 25%, #0000 25%),
+          linear-gradient(45deg, #0000 75%, #e5e4df 75%),
+          linear-gradient(-45deg, #0000 75%, #e5e4df 75%);
+        background-position:
+          0 0,
+          0 6px,
+          6px -6px,
+          -6px 0;
+        background-size: 12px 12px;
         padding: 0;
         cursor: pointer;
       }
       .dark .cf-gallery-card {
         border-color: #1e293b;
+        background-color: #101010;
+        background-image:
+          linear-gradient(45deg, #1e1e1e 25%, #0000 25%),
+          linear-gradient(-45deg, #1e1e1e 25%, #0000 25%),
+          linear-gradient(45deg, #0000 75%, #1e1e1e 75%),
+          linear-gradient(-45deg, #0000 75%, #1e1e1e 75%);
+      }
+      .cf-gallery-delete {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        border: 1.5px solid rgba(255, 255, 255, 0.85);
+        background: rgba(15, 23, 42, 0.78);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 5;
+        transition:
+          background 150ms ease,
+          transform 150ms ease;
+      }
+      .cf-gallery-delete:hover {
+        background: #dc2626;
+        transform: scale(1.06);
+      }
+      .cf-mini-stats-row {
+        height: 24px;
+        flex-shrink: 0;
+        padding: 0 12px;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-variant-numeric: tabular-nums;
+        font-size: 10px;
+        line-height: 1;
+        white-space: nowrap;
+        overflow-x: auto;
+      }
+      .dark .cf-mini-stats-row {
+        border-top-color: #1e293b;
+        background: #020617;
+        color: #94a3b8;
+      }
+      .cf-error-toast {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 30;
+        max-width: min(520px, 92%);
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: rgba(153, 27, 27, 0.96);
+        border: 1px solid rgba(252, 165, 165, 0.55);
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.4;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      }
+      .cf-error-toast-close {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+        font-size: 14px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .cf-error-toast-close:hover {
+        background: rgba(255, 255, 255, 0.32);
+      }
+      .cf-unit-switch {
+        display: inline-flex;
+        padding: 2px;
+        border-radius: 7px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        gap: 2px;
+      }
+      .dark .cf-unit-switch {
+        background: #0f172a;
+        border-color: #1e293b;
+      }
+      .cf-unit-btn {
+        padding: 2px 8px;
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: 700;
+        font-family: ui-monospace, monospace;
+        color: #64748b;
+        cursor: pointer;
+      }
+      .cf-unit-btn-active {
+        background: #2563eb;
+        color: #ffffff;
+      }
+      .cf-tbg-lock {
+        padding: 14px 12px;
+        border-radius: 10px;
+        border: 1px dashed #cbd5e1;
+        background: #f8fafc;
+        text-align: center;
+      }
+      .dark .cf-tbg-lock {
+        border-color: #334155;
+        background: #020617;
+      }
+      .cf-tbg-unlocked-pill {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        color: #059669;
+      }
+      .dark .cf-tbg-unlocked-pill {
+        color: #34d399;
+      }
+      .cf-tbg-preview {
+        width: 100%;
+        height: 64px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        overflow: hidden;
+        position: relative;
+      }
+      .dark .cf-tbg-preview {
+        border-color: #334155;
+      }
+      .cf-tbg-swatch {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: 2px solid rgba(148, 163, 184, 0.55);
+        cursor: pointer;
+        flex-shrink: 0;
       }
       .cf-gallery-card-selected {
         border-color: #2563eb !important;
