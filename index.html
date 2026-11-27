@@ -45,17 +45,22 @@
         ArrowUp as c,
         BookmarkPlus as l,
         Check as u,
+        Check as cfCheck,
+        ChevronDown as cfChevronDown,
         Columns2 as d,
         Copy as f,
         Download as p,
         ExternalLink as m,
+        Eye as cfEye,
         FileText as h,
         FileUp as g,
+        Film as cfFilm,
         FolderOpen as _,
         FolderOutput as v,
         Grid2x2 as ee,
         HardDrive as y,
         ImagePlus as te,
+        Images as cfImages,
         Layers as ne,
         Moon as b,
         Play as re,
@@ -1056,6 +1061,19 @@
             n.pinned || (this.release(t), (this.evictionCount += 1), (e += 1));
           return (this.notify(), e);
         }
+        pinExclusive(keepIds) {
+          let keep = new Set(keepIds),
+            evicted = 0;
+          for (let [id, entry] of Array.from(this.resources.entries()))
+            keep.has(id)
+              ? ((entry.pinned = !0), (entry.lastAccessed = Date.now()))
+              : (id.endsWith(`-cur`) || id.endsWith(`-orig`)) &&
+                ((entry.pinned = !1),
+                this.release(id),
+                (this.evictionCount += 1),
+                (evicted += 1));
+          return (evicted > 0 && this.notify(), evicted);
+        }
         disposeCanvas(e) {
           if (!e) return;
           let t = e.getContext(`2d`);
@@ -1735,6 +1753,10 @@
         visualDiffViewMode: ye,
         visualDiffOnionOpacity: A,
         passportStandard: be,
+        onOpenGallery: cfOnOpenGallery,
+        onOpenMediaView: cfOnOpenMediaView,
+        isPortrait: cfIsPortrait,
+        importProgress: cfImportProgress,
       }) {
         let [xe, Se] = a(1),
           zoom = xe,
@@ -1979,6 +2001,19 @@
                         w(`span`, { children: `Folder` }),
                       ],
                     }),
+                    T(`button`, {
+                      type: `button`,
+                      "data-testid": `toolbar-gallery-btn`,
+                      onClick: cfOnOpenGallery,
+                      className: `inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md whitespace-nowrap shrink-0 transition-colors`,
+                      children: [
+                        w(cfImages, {
+                          className: `w-3.5 h-3.5`,
+                          "aria-hidden": `true`,
+                        }),
+                        w(`span`, { children: `Gallery` }),
+                      ],
+                    }),
                     w(`span`, {
                       className: `w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5`,
                       "aria-hidden": `true`,
@@ -2138,362 +2173,461 @@
               },
               style: { touchAction: `none` },
               className: `relative flex-1 min-h-0 studio-checkerboard overflow-hidden flex items-center justify-center p-4 transition-colors select-none cursor-grab active:cursor-grabbing ${we ? `ring-2 ring-inset ring-neutral-900 dark:ring-white` : ``}`,
-              children: t
-                ? T(`div`, {
-                    className: `relative inline-block select-none shadow-2xl`,
-                    style: {
-                      transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
-                      transformOrigin: `center center`,
-                      willChange: `transform`,
-                    },
-                    children: [
-                      w(`img`, {
-                        src: t.previewUrl,
-                        alt: t.name,
-                        referrerPolicy: `no-referrer`,
-                        draggable: !1,
-                        className: `block max-h-[62vh] max-w-full w-auto h-auto object-contain rounded-sm`,
-                      }),
-                      (x || (ke && ye === `slider`)) &&
-                        T(he, {
-                          children: [
-                            w(`div`, {
-                              className: `absolute inset-0 overflow-hidden pointer-events-none`,
-                              style: { clipPath: `inset(0 ${100 - j}% 0 0)` },
-                              children: w(`img`, {
-                                src: t.originalPreviewUrl,
-                                alt: `${t.name} original`,
-                                referrerPolicy: `no-referrer`,
-                                draggable: !1,
-                                className: `w-full h-full object-contain`,
-                              }),
-                            }),
-                            w(`div`, {
-                              className: `absolute inset-y-0 w-0.5 bg-white shadow pointer-events-none`,
-                              style: { left: `${j}%` },
-                            }),
-                            T(`div`, {
-                              className: `absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-semibold bg-slate-950/75 text-white rounded pointer-events-none`,
-                              children: [`Original · `, z(t.originalBytes)],
-                            }),
-                            T(`div`, {
-                              className: `absolute top-2.5 right-2.5 px-2 py-0.5 text-[10px] font-semibold bg-slate-950/75 text-white rounded pointer-events-none`,
-                              children: [`Output · `, z(t.currentBytes)],
-                            }),
-                            w(`input`, {
-                              type: `range`,
-                              min: 2,
-                              max: 98,
-                              value: j,
-                              onChange: (e) => M(Number(e.target.value)),
-                              "aria-label": `Before and after split comparison position`,
-                              className: `absolute inset-x-0 bottom-3 mx-auto w-48 z-20 cursor-ew-resize`,
-                            }),
-                          ],
-                        }),
-                      ke &&
-                        k &&
-                        ye === `heatmap` &&
-                        w(`img`, {
-                          src: k,
-                          alt: `Pixel difference heatmap`,
-                          className: `absolute inset-0 w-full h-full object-contain pointer-events-none`,
-                        }),
-                      ke &&
-                        ye === `onion` &&
-                        w(`img`, {
-                          src: t.originalPreviewUrl,
-                          alt: `Onion skin comparison`,
-                          style: { opacity: A / 100 },
-                          className: `absolute inset-0 w-full h-full object-contain pointer-events-none`,
-                        }),
-                      Oe &&
-                        w(`div`, {
-                          className: `absolute inset-0 pointer-events-none flex items-center justify-center`,
-                          children: T(`div`, {
-                            className: `border-2 border-dashed border-blue-400/90 relative ${be === `eu-35x45` ? `w-[62%] h-[80%]` : `w-[72%] h-[72%]`}`,
-                            children: [
-                              w(`div`, {
-                                className: `absolute inset-x-[22%] top-[14%] bottom-[24%] rounded-full border-2 border-emerald-400/90`,
-                              }),
-                              w(`div`, {
-                                className: `absolute inset-x-0 top-[44%] border-t border-emerald-300/80`,
-                              }),
-                              w(`span`, {
-                                className: `absolute -top-6 left-0 text-[10px] font-mono bg-slate-950/80 text-white px-1.5 py-0.5 rounded`,
-                                children: `Eye line & crown guide`,
-                              }),
-                            ],
-                          }),
-                        }),
-                      De &&
-                        T(`div`, {
-                          ref: P,
-                          onPointerMove: Me,
-                          onPointerUp: Ne,
-                          className: `absolute inset-0 z-10`,
-                          children: [
-                            w(`svg`, {
-                              className: `w-full h-full pointer-events-none`,
-                              viewBox: `0 0 100 100`,
-                              preserveAspectRatio: `none`,
-                              children: w(`polygon`, {
-                                points: `${O.tl.x * 100},${O.tl.y * 100} ${O.tr.x * 100},${O.tr.y * 100} ${O.br.x * 100},${O.br.y * 100} ${O.bl.x * 100},${O.bl.y * 100}`,
-                                fill: `rgba(37, 99, 235, 0.14)`,
-                                stroke: `#3B82F6`,
-                                strokeWidth: `0.6`,
-                              }),
-                            }),
-                            [`tl`, `tr`, `br`, `bl`].map((e) =>
-                              w(
-                                `button`,
-                                {
-                                  type: `button`,
-                                  "aria-label": `Drag ${e.toUpperCase()} perspective corner`,
-                                  onPointerDown: (t) => {
-                                    (t.stopPropagation(),
-                                      (I.current = e),
-                                      P.current?.setPointerCapture(
-                                        t.pointerId,
-                                      ));
-                                  },
-                                  style: {
-                                    left: `${O[e].x * 100}%`,
-                                    top: `${O[e].y * 100}%`,
-                                  },
-                                  className: `absolute -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow cursor-move`,
-                                },
-                                e,
-                              ),
-                            ),
-                          ],
-                        }),
-                      (Ee || L) &&
-                        w(`div`, {
-                          ref: P,
-                          onPointerDown: je,
-                          onPointerMove: Me,
-                          onPointerUp: Ne,
-                          className: `absolute inset-0 z-10 cursor-crosshair`,
-                          children: T(`svg`, {
-                            className: `w-full h-full pointer-events-none`,
-                            viewBox: `0 0 1000 1000`,
-                            preserveAspectRatio: `none`,
-                            children: [
-                              Ee &&
-                                C.map((e) => {
-                                  let t = e.x1 * 1e3,
-                                    n = e.y1 * 1e3,
-                                    r = e.x2 * 1e3,
-                                    i = e.y2 * 1e3;
-                                  if (e.kind === `rect`)
-                                    return w(
-                                      `rect`,
-                                      {
-                                        x: Math.min(t, r),
-                                        y: Math.min(n, i),
-                                        width: Math.abs(r - t),
-                                        height: Math.abs(i - n),
-                                        fill: `none`,
-                                        stroke: e.color,
-                                        strokeWidth: 6,
-                                      },
-                                      e.id,
-                                    );
-                                  if (e.kind === `circle`)
-                                    return w(
-                                      `ellipse`,
-                                      {
-                                        cx: (t + r) / 2,
-                                        cy: (n + i) / 2,
-                                        rx: Math.abs(r - t) / 2,
-                                        ry: Math.abs(i - n) / 2,
-                                        fill: `none`,
-                                        stroke: e.color,
-                                        strokeWidth: 6,
-                                      },
-                                      e.id,
-                                    );
-                                  if (e.kind === `arrow`)
-                                    return w(
-                                      `line`,
-                                      {
-                                        x1: t,
-                                        y1: n,
-                                        x2: r,
-                                        y2: i,
-                                        stroke: e.color,
-                                        strokeWidth: 7,
-                                        strokeLinecap: `round`,
-                                      },
-                                      e.id,
-                                    );
-                                  if (e.kind === `highlight` && e.points) {
-                                    let t = e.points
-                                      .map((e) => `${e.x * 1e3},${e.y * 1e3}`)
-                                      .join(` `);
-                                    return w(
-                                      `polyline`,
-                                      {
-                                        points: t,
-                                        fill: `none`,
-                                        stroke: e.color,
-                                        strokeOpacity: 0.45,
-                                        strokeWidth: 22,
-                                        strokeLinecap: `round`,
-                                        strokeLinejoin: `round`,
-                                      },
-                                      e.id,
-                                    );
-                                  }
-                                  return e.kind === `step`
-                                    ? T(
-                                        `g`,
-                                        {
-                                          children: [
-                                            w(`circle`, {
-                                              cx: t,
-                                              cy: n,
-                                              r: 24,
-                                              fill: e.color,
-                                            }),
-                                            w(`text`, {
-                                              x: t,
-                                              y: n + 9,
-                                              textAnchor: `middle`,
-                                              fill: `#FFFFFF`,
-                                              fontSize: `26`,
-                                              fontWeight: `700`,
-                                              children: e.stepNumber,
-                                            }),
-                                          ],
-                                        },
-                                        e.id,
-                                      )
-                                    : null;
-                                }),
-                              L &&
-                                D.map((e) =>
-                                  w(
-                                    `rect`,
-                                    {
-                                      x: e.x * 1e3,
-                                      y: e.y * 1e3,
-                                      width: e.w * 1e3,
-                                      height: e.h * 1e3,
-                                      fill:
-                                        e.mode === `blackout`
-                                          ? `rgba(9,9,11,0.88)`
-                                          : `rgba(220,38,38,0.26)`,
-                                      stroke: `#EF4444`,
-                                      strokeDasharray: `10 6`,
-                                      strokeWidth: 4,
-                                    },
-                                    e.id,
-                                  ),
-                                ),
-                            ],
-                          }),
-                        }),
-                    ],
-                  })
-                : T(`div`, {
-                    className: `max-w-md w-full bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center shadow-sm`,
-                    children: [
-                      w(`div`, {
-                        className: `w-11 h-11 mx-auto rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 mb-4`,
-                        children: w(te, {
-                          className: `w-5 h-5`,
-                          "aria-hidden": `true`,
-                        }),
-                      }),
-                      w(`h2`, {
-                        className: `text-base font-semibold text-slate-900 dark:text-slate-100`,
-                        children: `Drop images, paste (Ctrl+V), or open a local folder`,
-                      }),
-                      w(`p`, {
-                        className: `mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed`,
-                        children: `Every file stays 100% local in your browser OPFS vault with automatic 300 MB memory governance.`,
-                      }),
-                      T(`div`, {
-                        className: `mt-5 flex flex-wrap items-center justify-center gap-2.5`,
-                        children: [
-                          w(`button`, {
-                            type: `button`,
-                            onClick: p,
-                            className: `px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors`,
-                            children: `Open Local Files`,
-                          }),
-                          null,
-                        ],
-                      }),
-                    ],
-                  }),
-            }),
-            T(`div`, {
-              className: `h-[74px] shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 flex items-center gap-2 overflow-x-auto`,
-              children: [
-                e.map((e) => {
-                  let n = t?.id === e.id;
-                  return T(
-                    `div`,
-                    {
-                      className: `group relative flex items-center gap-2 pr-2 pl-1 py-1 rounded-lg border shrink-0 transition-colors ${n ? `border-blue-600 bg-blue-50/70 dark:bg-blue-950/40` : `border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700`}`,
+              children: T(he, {
+                children: [
+                  cfImportProgress &&
+                    cfImportProgress.total > 0 &&
+                    T(`div`, {
+                      className: `cf-import-pill`,
+                      "data-testid": `import-progress-pill`,
                       children: [
-                        T(`button`, {
-                          type: `button`,
-                          onClick: () => c(e.id),
-                          className: `flex items-center gap-2 text-left focus-visible:outline-none`,
-                          children: [
-                            w(`img`, {
-                              src: e.previewUrl,
-                              alt: e.name,
-                              referrerPolicy: `no-referrer`,
-                              className: `w-11 h-11 rounded object-cover bg-slate-200 dark:bg-slate-800 shrink-0`,
-                            }),
-                            T(`div`, {
-                              className: `max-w-[132px]`,
-                              children: [
-                                w(`p`, {
-                                  className: `text-[11px] font-medium text-slate-900 dark:text-slate-100 truncate`,
-                                  children: e.name,
-                                }),
-                                T(`p`, {
-                                  className: `text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400`,
+                        `Importing `,
+                        cfImportProgress.done,
+                        ` / `,
+                        cfImportProgress.total,
+                        ` · RAM Safe`,
+                      ],
+                    }),
+                  t
+                    ? T(`div`, {
+                        className: `relative inline-block select-none shadow-2xl`,
+                        style: {
+                          transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+                          transformOrigin: `center center`,
+                          willChange: `transform`,
+                        },
+                        children: [
+                          t.mediaKind === `video` && t.playable && t.previewUrl
+                            ? w(`video`, {
+                                src: t.previewUrl,
+                                poster: t.thumbUrl || void 0,
+                                controls: !0,
+                                playsInline: !0,
+                                muted: !0,
+                                loop: !0,
+                                onPointerDown: (ev) => ev.stopPropagation(),
+                                className: `block max-h-[56vh] max-w-full w-auto h-auto rounded-sm bg-slate-950`,
+                              })
+                            : t.mediaKind === `media` ||
+                                (t.mediaKind === `video` && !t.playable)
+                              ? T(`div`, {
+                                  className: `cf-media-fallback-card`,
                                   children: [
-                                    e.width,
-                                    `×`,
-                                    e.height,
-                                    ` · `,
-                                    z(e.currentBytes),
+                                    w(`img`, {
+                                      src: t.thumbUrl || t.previewUrl,
+                                      alt: t.name,
+                                      className: `w-36 h-28 object-contain rounded-lg`,
+                                    }),
+                                    w(`p`, {
+                                      className: `text-xs font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[240px]`,
+                                      children: t.name,
+                                    }),
+                                    T(`p`, {
+                                      className: `text-[11px] font-mono text-slate-500 dark:text-slate-400`,
+                                      children: [
+                                        (t.formatExt || `MEDIA`).toUpperCase(),
+                                        ` · `,
+                                        z(t.currentBytes),
+                                        ` · Stored in OPFS Vault`,
+                                      ],
+                                    }),
                                   ],
+                                })
+                              : w(`img`, {
+                                  src: t.previewUrl || t.thumbUrl,
+                                  alt: t.name,
+                                  referrerPolicy: `no-referrer`,
+                                  draggable: !1,
+                                  className: `block max-h-[56vh] max-w-full w-auto h-auto object-contain rounded-sm`,
+                                }),
+                          (x || (ke && ye === `slider`)) &&
+                            T(he, {
+                              children: [
+                                w(`div`, {
+                                  className: `absolute inset-0 overflow-hidden pointer-events-none`,
+                                  style: {
+                                    clipPath: `inset(0 ${100 - j}% 0 0)`,
+                                  },
+                                  children: w(`img`, {
+                                    src: t.originalPreviewUrl,
+                                    alt: `${t.name} original`,
+                                    referrerPolicy: `no-referrer`,
+                                    draggable: !1,
+                                    className: `w-full h-full object-contain`,
+                                  }),
+                                }),
+                                w(`div`, {
+                                  className: `absolute inset-y-0 w-0.5 bg-white shadow pointer-events-none`,
+                                  style: { left: `${j}%` },
+                                }),
+                                T(`div`, {
+                                  className: `absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-semibold bg-slate-950/75 text-white rounded pointer-events-none`,
+                                  children: [`Original · `, z(t.originalBytes)],
+                                }),
+                                T(`div`, {
+                                  className: `absolute top-2.5 right-2.5 px-2 py-0.5 text-[10px] font-semibold bg-slate-950/75 text-white rounded pointer-events-none`,
+                                  children: [`Output · `, z(t.currentBytes)],
+                                }),
+                                w(`input`, {
+                                  type: `range`,
+                                  min: 2,
+                                  max: 98,
+                                  value: j,
+                                  onChange: (e) => M(Number(e.target.value)),
+                                  "aria-label": `Before and after split comparison position`,
+                                  className: `absolute inset-x-0 bottom-3 mx-auto w-48 z-20 cursor-ew-resize`,
                                 }),
                               ],
                             }),
-                          ],
-                        }),
-                        w(`button`, {
-                          type: `button`,
-                          onClick: () => l(e.id),
-                          "aria-label": `Remove ${e.name}`,
-                          className: `p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors`,
-                          children: w(ce, { className: `w-3 h-3` }),
-                        }),
-                      ],
-                    },
-                    e.id,
-                  );
+                          ke &&
+                            k &&
+                            ye === `heatmap` &&
+                            w(`img`, {
+                              src: k,
+                              alt: `Pixel difference heatmap`,
+                              className: `absolute inset-0 w-full h-full object-contain pointer-events-none`,
+                            }),
+                          ke &&
+                            ye === `onion` &&
+                            w(`img`, {
+                              src: t.originalPreviewUrl,
+                              alt: `Onion skin comparison`,
+                              style: { opacity: A / 100 },
+                              className: `absolute inset-0 w-full h-full object-contain pointer-events-none`,
+                            }),
+                          Oe &&
+                            w(`div`, {
+                              className: `absolute inset-0 pointer-events-none flex items-center justify-center`,
+                              children: T(`div`, {
+                                className: `border-2 border-dashed border-blue-400/90 relative ${be === `eu-35x45` ? `w-[62%] h-[80%]` : `w-[72%] h-[72%]`}`,
+                                children: [
+                                  w(`div`, {
+                                    className: `absolute inset-x-[22%] top-[14%] bottom-[24%] rounded-full border-2 border-emerald-400/90`,
+                                  }),
+                                  w(`div`, {
+                                    className: `absolute inset-x-0 top-[44%] border-t border-emerald-300/80`,
+                                  }),
+                                  w(`span`, {
+                                    className: `absolute -top-6 left-0 text-[10px] font-mono bg-slate-950/80 text-white px-1.5 py-0.5 rounded`,
+                                    children: `Eye line & crown guide`,
+                                  }),
+                                ],
+                              }),
+                            }),
+                          De &&
+                            T(`div`, {
+                              ref: P,
+                              onPointerMove: Me,
+                              onPointerUp: Ne,
+                              className: `absolute inset-0 z-10`,
+                              children: [
+                                w(`svg`, {
+                                  className: `w-full h-full pointer-events-none`,
+                                  viewBox: `0 0 100 100`,
+                                  preserveAspectRatio: `none`,
+                                  children: w(`polygon`, {
+                                    points: `${O.tl.x * 100},${O.tl.y * 100} ${O.tr.x * 100},${O.tr.y * 100} ${O.br.x * 100},${O.br.y * 100} ${O.bl.x * 100},${O.bl.y * 100}`,
+                                    fill: `rgba(37, 99, 235, 0.14)`,
+                                    stroke: `#3B82F6`,
+                                    strokeWidth: `0.6`,
+                                  }),
+                                }),
+                                [`tl`, `tr`, `br`, `bl`].map((e) =>
+                                  w(
+                                    `button`,
+                                    {
+                                      type: `button`,
+                                      "aria-label": `Drag ${e.toUpperCase()} perspective corner`,
+                                      onPointerDown: (t) => {
+                                        (t.stopPropagation(),
+                                          (I.current = e),
+                                          P.current?.setPointerCapture(
+                                            t.pointerId,
+                                          ));
+                                      },
+                                      style: {
+                                        left: `${O[e].x * 100}%`,
+                                        top: `${O[e].y * 100}%`,
+                                      },
+                                      className: `absolute -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow cursor-move`,
+                                    },
+                                    e,
+                                  ),
+                                ),
+                              ],
+                            }),
+                          (Ee || L) &&
+                            w(`div`, {
+                              ref: P,
+                              onPointerDown: je,
+                              onPointerMove: Me,
+                              onPointerUp: Ne,
+                              className: `absolute inset-0 z-10 cursor-crosshair`,
+                              children: T(`svg`, {
+                                className: `w-full h-full pointer-events-none`,
+                                viewBox: `0 0 1000 1000`,
+                                preserveAspectRatio: `none`,
+                                children: [
+                                  Ee &&
+                                    C.map((e) => {
+                                      let t = e.x1 * 1e3,
+                                        n = e.y1 * 1e3,
+                                        r = e.x2 * 1e3,
+                                        i = e.y2 * 1e3;
+                                      if (e.kind === `rect`)
+                                        return w(
+                                          `rect`,
+                                          {
+                                            x: Math.min(t, r),
+                                            y: Math.min(n, i),
+                                            width: Math.abs(r - t),
+                                            height: Math.abs(i - n),
+                                            fill: `none`,
+                                            stroke: e.color,
+                                            strokeWidth: 6,
+                                          },
+                                          e.id,
+                                        );
+                                      if (e.kind === `circle`)
+                                        return w(
+                                          `ellipse`,
+                                          {
+                                            cx: (t + r) / 2,
+                                            cy: (n + i) / 2,
+                                            rx: Math.abs(r - t) / 2,
+                                            ry: Math.abs(i - n) / 2,
+                                            fill: `none`,
+                                            stroke: e.color,
+                                            strokeWidth: 6,
+                                          },
+                                          e.id,
+                                        );
+                                      if (e.kind === `arrow`)
+                                        return w(
+                                          `line`,
+                                          {
+                                            x1: t,
+                                            y1: n,
+                                            x2: r,
+                                            y2: i,
+                                            stroke: e.color,
+                                            strokeWidth: 7,
+                                            strokeLinecap: `round`,
+                                          },
+                                          e.id,
+                                        );
+                                      if (e.kind === `highlight` && e.points) {
+                                        let t = e.points
+                                          .map(
+                                            (e) => `${e.x * 1e3},${e.y * 1e3}`,
+                                          )
+                                          .join(` `);
+                                        return w(
+                                          `polyline`,
+                                          {
+                                            points: t,
+                                            fill: `none`,
+                                            stroke: e.color,
+                                            strokeOpacity: 0.45,
+                                            strokeWidth: 22,
+                                            strokeLinecap: `round`,
+                                            strokeLinejoin: `round`,
+                                          },
+                                          e.id,
+                                        );
+                                      }
+                                      return e.kind === `step`
+                                        ? T(
+                                            `g`,
+                                            {
+                                              children: [
+                                                w(`circle`, {
+                                                  cx: t,
+                                                  cy: n,
+                                                  r: 24,
+                                                  fill: e.color,
+                                                }),
+                                                w(`text`, {
+                                                  x: t,
+                                                  y: n + 9,
+                                                  textAnchor: `middle`,
+                                                  fill: `#FFFFFF`,
+                                                  fontSize: `26`,
+                                                  fontWeight: `700`,
+                                                  children: e.stepNumber,
+                                                }),
+                                              ],
+                                            },
+                                            e.id,
+                                          )
+                                        : null;
+                                    }),
+                                  L &&
+                                    D.map((e) =>
+                                      w(
+                                        `rect`,
+                                        {
+                                          x: e.x * 1e3,
+                                          y: e.y * 1e3,
+                                          width: e.w * 1e3,
+                                          height: e.h * 1e3,
+                                          fill:
+                                            e.mode === `blackout`
+                                              ? `rgba(9,9,11,0.88)`
+                                              : `rgba(220,38,38,0.26)`,
+                                          stroke: `#EF4444`,
+                                          strokeDasharray: `10 6`,
+                                          strokeWidth: 4,
+                                        },
+                                        e.id,
+                                      ),
+                                    ),
+                                ],
+                              }),
+                            }),
+                        ],
+                      })
+                    : T(`div`, {
+                        className: `max-w-md w-full bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center shadow-sm`,
+                        children: [
+                          w(`div`, {
+                            className: `w-11 h-11 mx-auto rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 mb-4`,
+                            children: w(te, {
+                              className: `w-5 h-5`,
+                              "aria-hidden": `true`,
+                            }),
+                          }),
+                          w(`h2`, {
+                            className: `text-base font-semibold text-slate-900 dark:text-slate-100`,
+                            children: `Drop images, paste (Ctrl+V), or open a local folder`,
+                          }),
+                          w(`p`, {
+                            className: `mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed`,
+                            children: `Every file stays 100% local in your browser OPFS vault with automatic 300 MB memory governance.`,
+                          }),
+                          T(`div`, {
+                            className: `mt-5 flex flex-wrap items-center justify-center gap-2.5`,
+                            children: [
+                              w(`button`, {
+                                type: `button`,
+                                onClick: p,
+                                className: `px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors`,
+                                children: `Open Local Files`,
+                              }),
+                              null,
+                            ],
+                          }),
+                        ],
+                      }),
+                ],
+              }),
+            }),
+            T(`div`, {
+              "data-testid": `filmstrip-row`,
+              className: `h-[74px] shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 flex items-center gap-2`,
+              children: [
+                w(`div`, {
+                  className: `flex-1 min-w-0 flex items-center gap-2 overflow-x-auto`,
+                  children: e.map((item) => {
+                    let isActive = t?.id === item.id;
+                    return T(
+                      `div`,
+                      {
+                        className: `group relative flex items-center gap-2 pr-2 pl-1 py-1 rounded-lg border shrink-0 transition-colors ${isActive ? `border-blue-600 bg-blue-50/70 dark:bg-blue-950/40` : `border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700`}`,
+                        children: [
+                          T(`button`, {
+                            type: `button`,
+                            onClick: () => c(item.id),
+                            className: `flex items-center gap-2 text-left focus-visible:outline-none`,
+                            children: [
+                              T(`div`, {
+                                className: `relative w-11 h-11 shrink-0`,
+                                children: [
+                                  w(`img`, {
+                                    src: item.thumbUrl || item.previewUrl,
+                                    alt: item.name,
+                                    loading: `lazy`,
+                                    decoding: `async`,
+                                    referrerPolicy: `no-referrer`,
+                                    className: `w-11 h-11 rounded object-cover bg-slate-200 dark:bg-slate-800`,
+                                  }),
+                                  item.mediaKind === `video` &&
+                                    w(`span`, {
+                                      className: `cf-video-badge`,
+                                      children: w(cfFilm, {
+                                        className: `w-2.5 h-2.5`,
+                                      }),
+                                    }),
+                                ],
+                              }),
+                              T(`div`, {
+                                className: `max-w-[116px]`,
+                                children: [
+                                  w(`p`, {
+                                    className: `text-[11px] font-medium text-slate-900 dark:text-slate-100 truncate`,
+                                    children: item.name,
+                                  }),
+                                  T(`p`, {
+                                    className: `text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400 truncate`,
+                                    children: [
+                                      item.width > 0
+                                        ? `${item.width}×${item.height}`
+                                        : (
+                                            item.formatExt || `FILE`
+                                          ).toUpperCase(),
+                                      ` · `,
+                                      z(item.currentBytes),
+                                    ],
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                          w(`button`, {
+                            type: `button`,
+                            onClick: () => l(item.id),
+                            "aria-label": `Remove ${item.name}`,
+                            className: `p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors`,
+                            children: w(ce, { className: `w-3 h-3` }),
+                          }),
+                        ],
+                      },
+                      item.id,
+                    );
+                  }),
                 }),
-                T(`button`, {
-                  type: `button`,
-                  onClick: p,
-                  className: `h-12 px-3 border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors`,
+                T(`div`, {
+                  className: `cf-filmstrip-actions`,
                   children: [
-                    w(te, { className: `w-3.5 h-3.5`, "aria-hidden": `true` }),
-                    w(`span`, { children: `Add` }),
+                    T(`button`, {
+                      type: `button`,
+                      "data-testid": `filmstrip-add-btn`,
+                      onClick: p,
+                      className: `h-12 px-3 border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors`,
+                      children: [
+                        w(te, {
+                          className: `w-3.5 h-3.5`,
+                          "aria-hidden": `true`,
+                        }),
+                        w(`span`, { children: `Add` }),
+                      ],
+                    }),
+                    e.length > 2 &&
+                      T(`button`, {
+                        type: `button`,
+                        "data-testid": `filmstrip-view-btn`,
+                        onClick: cfOnOpenMediaView,
+                        className: `h-12 px-3 border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors`,
+                        children: [
+                          w(cfEye, {
+                            className: `w-3.5 h-3.5`,
+                            "aria-hidden": `true`,
+                          }),
+                          w(`span`, { children: `View` }),
+                        ],
+                      }),
                   ],
                 }),
-                null,
               ],
             }),
           ],
@@ -4248,6 +4382,24 @@
           }),
         });
       }
+      var cfVideoExts = new Set([
+        `mp4`,
+        `mov`,
+        `webm`,
+        `mkv`,
+        `avi`,
+        `m4v`,
+        `3gp`,
+        `3g2`,
+        `ogv`,
+        `ts`,
+        `mts`,
+        `m2ts`,
+        `flv`,
+        `wmv`,
+        `mpg`,
+        `mpeg`,
+      ]);
       var Ge = new Set([
         `jpg`,
         `jpeg`,
@@ -4267,8 +4419,228 @@
         `cr2`,
         `nef`,
         `arw`,
+        `orf`,
+        `rw2`,
+        `raf`,
+        `jxl`,
+        `jp2`,
+        `psd`,
         `pdf`,
+        ...cfVideoExts,
       ]);
+      function cfSafeExt(name = ``, mime = ``) {
+        let m = name.includes(`.`)
+          ? name
+              .split(`.`)
+              .pop()
+              ?.toLowerCase()
+              .replace(/[^a-z0-9]/g, ``)
+          : ``;
+        if (m && m.length <= 8) return m;
+        if (mime && mime.includes(`/`)) {
+          let sub = mime
+            .split(`/`)[1]
+            ?.split(`+`)[0]
+            ?.split(`;`)[0]
+            ?.replace(/[^a-z0-9]/g, ``);
+          if (sub) return sub === `jpeg` ? `jpg` : sub;
+        }
+        return `bin`;
+      }
+      function cfClassifyMedia(name = ``, mime = ``) {
+        let lowerMime = (mime || ``).toLowerCase(),
+          ext = cfSafeExt(name, mime);
+        if (lowerMime.startsWith(`video/`) || cfVideoExts.has(ext))
+          return `video`;
+        if (
+          lowerMime.startsWith(`image/`) ||
+          (Ge.has(ext) && ext !== `pdf` && ext !== `psd`)
+        )
+          return `image`;
+        return `media`;
+      }
+      function cfMakeBadgeThumb(ext, isVideo) {
+        let label = (ext || (isVideo ? `VID` : `FILE`))
+            .slice(0, 6)
+            .toUpperCase(),
+          bg = isVideo ? `#1e1b4b` : `#0f172a`,
+          accent = isVideo ? `#6366f1` : `#38bdf8`,
+          icon = isVideo
+            ? `<polygon points="82,42 82,78 112,60" fill="${accent}"/>`
+            : `<rect x="72" y="38" width="36" height="44" rx="6" fill="none" stroke="${accent}" stroke-width="5"/>`,
+          svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="140" viewBox="0 0 180 140"><rect width="180" height="140" rx="14" fill="${bg}"/>${icon}<text x="90" y="114" text-anchor="middle" font-family="ui-monospace,monospace" font-size="18" font-weight="700" fill="#f8fafc">${label}</text></svg>`;
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      }
+      async function cfMakeMicroThumbBlob(source, srcW, srcH, maxEdge = 180) {
+        let scale = Math.min(1, maxEdge / Math.max(1, srcW, srcH)),
+          tw = Math.max(1, Math.round(srcW * scale)),
+          th = Math.max(1, Math.round(srcH * scale)),
+          canvas = document.createElement(`canvas`);
+        canvas.width = tw;
+        canvas.height = th;
+        let ctx = canvas.getContext(`2d`);
+        if (!ctx) return (R.disposeCanvas(canvas), null);
+        ctx.drawImage(source, 0, 0, tw, th);
+        let blob = await new Promise((res) =>
+          canvas.toBlob((b) => res(b), `image/jpeg`, 0.72),
+        );
+        return (R.disposeCanvas(canvas), blob);
+      }
+      async function cfExtractVideoMeta(blob, name) {
+        let ext = cfSafeExt(name, blob.type),
+          tmpUrl = URL.createObjectURL(blob),
+          video = document.createElement(`video`);
+        video.muted = !0;
+        video.playsInline = !0;
+        video.preload = `metadata`;
+        try {
+          let meta = await new Promise((resolve) => {
+            let settled = !1,
+              finish = (val) => {
+                if (settled) return;
+                settled = !0;
+                clearTimeout(timer);
+                resolve(val);
+              },
+              timer = setTimeout(() => finish(null), 3500);
+            video.onloadeddata = () => {
+              let vw = video.videoWidth || 1280,
+                vh = video.videoHeight || 720,
+                dur = Number.isFinite(video.duration) ? video.duration : 0;
+              if (dur > 0.25 && video.currentTime === 0) {
+                video.onseeked = () =>
+                  finish({
+                    width: vw,
+                    height: vh,
+                    duration: dur,
+                    playable: !0,
+                  });
+                try {
+                  video.currentTime = Math.min(0.25, dur * 0.1);
+                } catch {
+                  finish({
+                    width: vw,
+                    height: vh,
+                    duration: dur,
+                    playable: !0,
+                  });
+                }
+              } else
+                finish({ width: vw, height: vh, duration: dur, playable: !0 });
+            };
+            video.onerror = () => finish(null);
+            video.src = tmpUrl;
+            video.load();
+          });
+          if (meta && meta.playable) {
+            let thumbBlob = await cfMakeMicroThumbBlob(
+              video,
+              meta.width,
+              meta.height,
+              180,
+            );
+            return {
+              mediaKind: `video`,
+              width: meta.width,
+              height: meta.height,
+              duration: meta.duration,
+              playable: !0,
+              thumbBlob,
+              fallbackThumb: cfMakeBadgeThumb(ext, !0),
+            };
+          }
+        } catch {
+        } finally {
+          try {
+            video.pause();
+            video.removeAttribute(`src`);
+            video.load();
+          } catch {}
+          try {
+            URL.revokeObjectURL(tmpUrl);
+          } catch {}
+        }
+        return {
+          mediaKind: `video`,
+          width: 1920,
+          height: 1080,
+          duration: 0,
+          playable: !1,
+          thumbBlob: null,
+          fallbackThumb: cfMakeBadgeThumb(ext, !0),
+        };
+      }
+      async function cfInspectMedia(blob, name = `file`) {
+        let kind = cfClassifyMedia(name, blob.type),
+          ext = cfSafeExt(name, blob.type);
+        if (kind === `video`) return cfExtractVideoMeta(blob, name);
+        if (kind === `image`) {
+          try {
+            let bmp = await q(blob, name),
+              w = bmp.width || 1,
+              h = bmp.height || 1,
+              thumbBlob = await cfMakeMicroThumbBlob(bmp, w, h, 180);
+            return (
+              bmp.close(),
+              {
+                mediaKind: `image`,
+                width: w,
+                height: h,
+                duration: 0,
+                playable: !0,
+                thumbBlob,
+                fallbackThumb: cfMakeBadgeThumb(ext, !1),
+              }
+            );
+          } catch {
+            let tmpUrl = URL.createObjectURL(blob);
+            try {
+              let img = await new Promise((resolve, reject) => {
+                let el = new Image(),
+                  t = setTimeout(() => reject(Error(`timeout`)), 2500);
+                el.onload = () => (clearTimeout(t), resolve(el));
+                el.onerror = () => (clearTimeout(t), reject(Error(`decode`)));
+                el.src = tmpUrl;
+              });
+              let w = img.naturalWidth || 512,
+                h = img.naturalHeight || 512,
+                thumbBlob = await cfMakeMicroThumbBlob(img, w, h, 180);
+              return {
+                mediaKind: `image`,
+                width: w,
+                height: h,
+                duration: 0,
+                playable: !0,
+                thumbBlob,
+                fallbackThumb: cfMakeBadgeThumb(ext, !1),
+              };
+            } catch {
+              return {
+                mediaKind: `media`,
+                width: 0,
+                height: 0,
+                duration: 0,
+                playable: !1,
+                thumbBlob: null,
+                fallbackThumb: cfMakeBadgeThumb(ext, !1),
+              };
+            } finally {
+              try {
+                URL.revokeObjectURL(tmpUrl);
+              } catch {}
+            }
+          }
+        }
+        return {
+          mediaKind: `media`,
+          width: 0,
+          height: 0,
+          duration: 0,
+          playable: !1,
+          thumbBlob: null,
+          fallbackThumb: cfMakeBadgeThumb(ext, !1),
+        };
+      }
       function Ke() {
         return (
           typeof window < `u` &&
@@ -4277,14 +4649,45 @@
           `showDirectoryPicker` in window
         );
       }
+      function cfTriggerInputPicker({
+        accept = `*/*`,
+        multiple = !0,
+        directory = !1,
+      } = {}) {
+        return new Promise((resolve) => {
+          let input = document.createElement(`input`),
+            done = !1,
+            finish = (files) => {
+              if (done) return;
+              done = !0;
+              input.remove();
+              resolve(files);
+            };
+          input.type = `file`;
+          input.multiple = multiple;
+          if (accept && !directory) input.accept = accept;
+          if (directory) {
+            input.webkitdirectory = !0;
+            input.setAttribute(`webkitdirectory`, ``);
+            input.setAttribute(`directory`, ``);
+          }
+          input.style.cssText = `position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none;`;
+          input.onchange = () =>
+            finish(input.files ? Array.from(input.files) : []);
+          input.oncancel = () => finish([]);
+          document.body.appendChild(input);
+          input.click();
+        });
+      }
       async function qe() {
         if (typeof window < `u` && `showOpenFilePicker` in window)
           try {
-            let e = await (0, window.showOpenFilePicker)({
+            let handles = await (0, window.showOpenFilePicker)({
                 multiple: !0,
+                excludeAcceptAllOption: !1,
                 types: [
                   {
-                    description: `Images, Vectors, RAW & PDFs`,
+                    description: `All Images, Videos & Media`,
                     accept: {
                       "image/*": [
                         `.jpg`,
@@ -4295,63 +4698,83 @@
                         `.gif`,
                         `.svg`,
                         `.bmp`,
-                        `.tiff`,
                         `.tif`,
+                        `.tiff`,
                         `.tga`,
                         `.ico`,
                         `.heic`,
                         `.heif`,
+                      ],
+                      "video/*": [
+                        `.mp4`,
+                        `.mov`,
+                        `.webm`,
+                        `.mkv`,
+                        `.avi`,
+                        `.m4v`,
+                        `.3gp`,
+                        `.ogv`,
                       ],
                       "application/pdf": [`.pdf`],
                     },
                   },
                 ],
               }),
-              t = [];
-            for (let n of e) t.push(await n.getFile());
-            return t;
+              out = [];
+            for (let h of handles) out.push(await h.getFile());
+            return out;
           } catch (e) {
             if (e instanceof DOMException && e.name === `AbortError`) return [];
           }
-        return new Promise((e) => {
-          let t = document.createElement(`input`);
-          ((t.type = `file`),
-            (t.multiple = !0),
-            (t.accept = `image/*,.heic,.heif,.tga,.tif,.tiff,.dng,.cr2,.nef,.arw,.pdf,.svg`),
-            (t.onchange = () => {
-              e(t.files ? Array.from(t.files) : []);
-            }),
-            t.click());
+        return cfTriggerInputPicker({ accept: `*/*`, multiple: !0 });
+      }
+      async function cfPickGalleryFiles() {
+        return cfTriggerInputPicker({
+          accept: `image/*,video/*,*/*`,
+          multiple: !0,
         });
       }
       async function Je() {
-        if (typeof window > `u` || !(`showDirectoryPicker` in window))
-          return null;
-        try {
-          let e = await (0, window.showDirectoryPicker)({ mode: `readwrite` }),
-            t = [],
-            n = e;
-          for await (let e of n.values())
-            if (e.kind === `file`) {
-              let n = e.name.split(`.`).pop()?.toLowerCase() ?? ``;
-              if (Ge.has(n)) {
-                let r = e,
-                  i = await r.getFile();
-                t.push({
-                  name: e.name,
-                  size: i.size,
-                  type: i.type || `image/${n}`,
-                  handle: r,
+        if (typeof window < `u` && `showDirectoryPicker` in window)
+          try {
+            let dir = await (0, window.showDirectoryPicker)({
+                mode: `readwrite`,
+              }),
+              entries = [],
+              files = [];
+            for await (let entry of dir.values())
+              if (entry.kind === `file`) {
+                let file = await entry.getFile();
+                files.push(file);
+                entries.push({
+                  name: entry.name,
+                  size: file.size,
+                  type: file.type || `application/octet-stream`,
+                  handle: entry,
                 });
               }
-            }
-          return (
-            t.sort((e, t) => e.name.localeCompare(t.name)),
-            { name: e.name, handle: e, entries: t }
-          );
-        } catch {
-          return null;
-        }
+            return (
+              entries.sort((a, b) => a.name.localeCompare(b.name)),
+              { name: dir.name, handle: dir, entries, files }
+            );
+          } catch (err) {
+            if (err instanceof DOMException && err.name === `AbortError`)
+              return null;
+          }
+        let picked = await cfTriggerInputPicker({
+          multiple: !0,
+          directory: !0,
+        });
+        if (!picked.length) return null;
+        let folderName =
+            picked[0].webkitRelativePath?.split(`/`)[0] || `Selected Folder`,
+          entries = picked.map((file) => ({
+            name: file.name,
+            size: file.size,
+            type: file.type || `application/octet-stream`,
+            handle: { getFile: async () => file },
+          }));
+        return { name: folderName, handle: null, entries, files: picked };
       }
       async function B(e, t) {
         if (typeof window < `u` && `showSaveFilePicker` in window)
@@ -11869,50 +12292,136 @@ endobj
       function Bt({
         activeTab: e,
         onSelectTab: t,
-        onExportActive: n,
+        onExportActive: o,
         canExport: r,
-        assetCount: i,
+        assetCount: s,
+        isPortrait: cfIsPortrait,
       }) {
+        let [navOpen, setNavOpen] = a(!1),
+          menuRef = i(null),
+          currentItem = zt.find((item) => item.id === e) || zt[0];
+        n(() => {
+          if (!navOpen) return;
+          let onDocClick = (ev) => {
+            menuRef.current &&
+              !menuRef.current.contains(ev.target) &&
+              setNavOpen(!1);
+          };
+          return (
+            document.addEventListener(`pointerdown`, onDocClick),
+            () => document.removeEventListener(`pointerdown`, onDocClick)
+          );
+        }, [navOpen]);
         return T(`header`, {
-          className: `h-14 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 flex items-center justify-between gap-8`,
+          "data-testid": `app-header`,
+          className: `h-14 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 flex items-center justify-between gap-4 cf-top-header`,
           children: [
-            w(`button`, {
-              type: `button`,
-              onClick: () => t(`editor`),
-              className: `text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded`,
-              children: `ChromaForge`,
-            }),
-            w(`nav`, {
-              "aria-label": `Workspace views`,
-              className: `flex items-center gap-5 sm:gap-7 overflow-x-auto`,
-              children: zt.map((n) => {
-                let r = e === n.id;
-                return T(
-                  `button`,
-                  {
-                    type: `button`,
-                    onClick: () => t(n.id),
-                    "aria-current": r ? `page` : void 0,
-                    className: `relative py-4 text-sm font-medium whitespace-nowrap shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded ${r ? `text-blue-600 dark:text-blue-400` : `text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100`}`,
-                    children: [
-                      n.label,
-                      n.id === `batch` && i > 0 ? ` (${i})` : ``,
-                      r &&
+            cfIsPortrait
+              ? T(`div`, {
+                  ref: menuRef,
+                  className: `cf-nav-wrap`,
+                  children: [
+                    w(`button`, {
+                      type: `button`,
+                      onClick: () => setNavOpen((v) => !v),
+                      className: `text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap shrink-0 focus-visible:outline-none`,
+                      children: `ChromaForge`,
+                    }),
+                    T(`button`, {
+                      type: `button`,
+                      "data-testid": `mobile-nav-trigger`,
+                      "aria-expanded": navOpen,
+                      "aria-haspopup": `menu`,
+                      onClick: () => setNavOpen((v) => !v),
+                      className: `cf-nav-trigger`,
+                      children: [
                         w(`span`, {
-                          "aria-hidden": `true`,
-                          className: `absolute inset-x-0 bottom-0 h-0.5 bg-blue-600 dark:bg-blue-400`,
+                          children:
+                            currentItem.id === `batch` && s > 0
+                              ? `${currentItem.label} (${s})`
+                              : currentItem.label,
                         }),
-                    ],
-                  },
-                  n.id,
-                );
-              }),
-            }),
+                        w(cfChevronDown, {
+                          className: `w-3.5 h-3.5 transition-transform ${navOpen ? `cf-rot-180` : ``}`,
+                          "aria-hidden": `true`,
+                        }),
+                      ],
+                    }),
+                    navOpen &&
+                      w(`div`, {
+                        role: `menu`,
+                        "data-testid": `mobile-nav-dropdown`,
+                        className: `cf-nav-dropdown`,
+                        children: zt.map((item) => {
+                          let isCur = e === item.id;
+                          return T(
+                            `button`,
+                            {
+                              type: `button`,
+                              role: `menuitem`,
+                              "data-testid": `mobile-nav-opt-${item.id}`,
+                              onClick: () => {
+                                (t(item.id), setNavOpen(!1));
+                              },
+                              className: `cf-nav-item ${isCur ? `cf-nav-item-active` : ``}`,
+                              children: [
+                                w(`span`, {
+                                  children:
+                                    item.id === `batch` && s > 0
+                                      ? `${item.label} (${s})`
+                                      : item.label,
+                                }),
+                                isCur &&
+                                  w(cfCheck, { className: `w-3.5 h-3.5` }),
+                              ],
+                            },
+                            item.id,
+                          );
+                        }),
+                      }),
+                  ],
+                })
+              : T(he, {
+                  children: [
+                    w(`button`, {
+                      type: `button`,
+                      onClick: () => t(`editor`),
+                      className: `text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded`,
+                      children: `ChromaForge`,
+                    }),
+                    w(`nav`, {
+                      "aria-label": `Workspace views`,
+                      className: `flex items-center gap-5 sm:gap-7 overflow-x-auto`,
+                      children: zt.map((item) => {
+                        let isCur = e === item.id;
+                        return T(
+                          `button`,
+                          {
+                            type: `button`,
+                            onClick: () => t(item.id),
+                            "aria-current": isCur ? `page` : void 0,
+                            className: `relative py-4 text-sm font-medium whitespace-nowrap shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded ${isCur ? `text-blue-600 dark:text-blue-400` : `text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100`}`,
+                            children: [
+                              item.label,
+                              item.id === `batch` && s > 0 ? ` (${s})` : ``,
+                              isCur &&
+                                w(`span`, {
+                                  "aria-hidden": `true`,
+                                  className: `absolute inset-x-0 bottom-0 h-0.5 bg-blue-600 dark:bg-blue-400`,
+                                }),
+                            ],
+                          },
+                          item.id,
+                        );
+                      }),
+                    }),
+                  ],
+                }),
             w(`div`, {
               className: `flex items-center shrink-0`,
               children: T(`button`, {
                 type: `button`,
-                onClick: n,
+                onClick: o,
                 disabled: !r,
                 className: `inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 rounded-lg transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`,
                 children: [
@@ -12090,15 +12599,44 @@ endobj
           }),
           j = l.find((e) => e.id === d) || l[0] || null;
         let [isPortrait, setIsPortrait] = a(() =>
-            typeof window < `u` ? window.innerHeight > window.innerWidth : !1,
+            typeof window < `u`
+              ? window.innerHeight > window.innerWidth ||
+                window.innerWidth < 768
+              : !1,
           ),
           [leftDrawerOpen, setLeftDrawerOpen] = a(!0),
           [rightDrawerOpen, setRightDrawerOpen] = a(!0),
           [focusMode, setFocusMode] = a(!1),
-          [portraitSheet, setPortraitSheet] = a(null);
+          [portraitSheet, setPortraitSheet] = a(null),
+          [sheetMinimized, setSheetMinimized] = a(!1),
+          [sheetDragY, setSheetDragY] = a(0),
+          [importProgress, setImportProgress] = a(null),
+          [galleryItems, setGalleryItems] = a([]),
+          [gallerySelected, setGallerySelected] = a([]),
+          [desktopMediaModal, setDesktopMediaModal] = a(null),
+          [sheetDragRef] = a(() => ({ current: null })),
+          openPortraitDrawer = (sheetName) => {
+            setPortraitSheet((cur) => {
+              if (cur === sheetName && !sheetMinimized) return null;
+              setSheetMinimized(!1);
+              setSheetDragY(0);
+              return sheetName;
+            });
+          },
+          openMediaDrawer = (sheetName) => {
+            isPortrait
+              ? (setPortraitSheet(sheetName),
+                setSheetMinimized(!1),
+                setSheetDragY(0))
+              : setDesktopMediaModal((cur) =>
+                  cur === sheetName ? null : sheetName,
+                );
+          };
         n(() => {
           let onResize = () =>
-            setIsPortrait(window.innerHeight > window.innerWidth);
+            setIsPortrait(
+              window.innerHeight > window.innerWidth || window.innerWidth < 768,
+            );
           return (
             window.addEventListener(`resize`, onResize),
             window.addEventListener(`orientationchange`, onResize),
@@ -12108,6 +12646,44 @@ endobj
             }
           );
         }, []);
+        n(() => {
+          if (!j) return;
+          let cancelled = !1;
+          (async () => {
+            let curId = `${j.id}-cur`,
+              origId = `${j.id}-orig`;
+            R.pinExclusive([curId, origId]);
+            if (j.previewUrl && j.originalPreviewUrl && R.resources.has(curId))
+              return;
+            let [curBlob, origBlob] = await Promise.all([
+              Z.readBlob(j.opfsCurrentPath),
+              j.opfsOriginalPath === j.opfsCurrentPath
+                ? Promise.resolve(null)
+                : Z.readBlob(j.opfsOriginalPath),
+            ]);
+            if (cancelled || !curBlob) return;
+            let nextCurUrl = R.createManagedBlobUrl(curId, curBlob, !0),
+              nextOrigUrl = origBlob
+                ? R.createManagedBlobUrl(origId, origBlob, !0)
+                : nextCurUrl;
+            u((list) =>
+              list.map((item) =>
+                item.id === j.id
+                  ? {
+                      ...item,
+                      previewUrl: nextCurUrl,
+                      originalPreviewUrl: nextOrigUrl,
+                    }
+                  : item.previewUrl && item.thumbUrl
+                    ? { ...item, previewUrl: ``, originalPreviewUrl: `` }
+                    : item,
+              ),
+            );
+          })();
+          return () => {
+            cancelled = !0;
+          };
+        }, [j?.id, j?.opfsCurrentPath]);
         n(() => {
           document.documentElement.classList.toggle(`dark`, s);
         }, [s]);
@@ -12143,44 +12719,128 @@ endobj
           [],
         );
         let N = t(
-            async (e, t, n = `upload`, r = !0) => {
+            async (
+              blob,
+              name,
+              source = `upload`,
+              activate = !0,
+              skipRefresh = !1,
+            ) => {
               try {
-                let i = await q(e, t),
-                  a = i.width,
-                  o = i.height;
-                i.close();
-                let s = `asset-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                  c = K(e.type || `image/jpeg`),
-                  l = await Z.writeBlob(`assets/${s}-orig.${c}`, e),
-                  d = await Z.writeBlob(`history/${s}-rev0.${c}`, e),
-                  p = R.createManagedBlobUrl(`${s}-orig`, e, !0),
-                  m = R.createManagedBlobUrl(`${s}-cur`, e, !0),
-                  h = {
-                    id: s,
-                    name: t,
-                    mimeType: e.type || `image/jpeg`,
-                    width: a,
-                    height: o,
-                    originalBytes: e.size,
-                    currentBytes: e.size,
-                    opfsOriginalPath: l,
-                    opfsCurrentPath: d,
-                    previewUrl: m,
-                    originalPreviewUrl: p,
+                let meta = await cfInspectMedia(blob, name),
+                  ext = cfSafeExt(name, blob.type),
+                  id = `asset-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  opfsPath = await Z.writeBlob(
+                    `assets/${id}-orig.${ext}`,
+                    blob,
+                  ),
+                  thumbUrl = meta.thumbBlob
+                    ? R.createManagedBlobUrl(`${id}-thumb`, meta.thumbBlob, !1)
+                    : meta.fallbackThumb,
+                  previewUrl = activate
+                    ? R.createManagedBlobUrl(`${id}-cur`, blob, !0)
+                    : ``,
+                  asset = {
+                    id,
+                    name,
+                    mimeType: blob.type || `application/octet-stream`,
+                    mediaKind: meta.mediaKind,
+                    formatExt: ext,
+                    playable: meta.playable,
+                    duration: meta.duration || 0,
+                    width: meta.width,
+                    height: meta.height,
+                    originalBytes: blob.size,
+                    currentBytes: blob.size,
+                    opfsOriginalPath: opfsPath,
+                    opfsCurrentPath: opfsPath,
+                    thumbUrl,
+                    previewUrl,
+                    originalPreviewUrl: previewUrl,
                     createdAt: Date.now(),
-                    source: n,
-                    historyIds: [d],
+                    source,
+                    historyIds: [opfsPath],
                     historyIndex: 0,
                   };
-                return (u((e) => [...e, h]), r && f(s), await M(), h);
-              } catch (e) {
+                u((prev) => [...prev, asset]);
+                setGalleryItems((prev) =>
+                  prev.some((x) => x.assetId === id)
+                    ? prev
+                    : [
+                        {
+                          id: `gal-${id}`,
+                          assetId: id,
+                          name,
+                          size: blob.size,
+                          mediaKind: meta.mediaKind,
+                          formatExt: ext,
+                          thumbUrl,
+                          imported: !0,
+                        },
+                        ...prev,
+                      ],
+                );
+                activate && f(id);
+                skipRefresh || (await M());
+                return asset;
+              } catch (err) {
                 return (
-                  g(e instanceof Error ? e.message : `Could not decode ${t}`),
+                  g(err instanceof Error ? err.message : `Saved ${name}`),
                   null
                 );
               }
             },
             [M],
+          ),
+          cfIngestMany = t(
+            async (files, source = `upload`) => {
+              let list = Array.from(files || []).filter(Boolean);
+              if (!list.length) return [];
+              m(!0);
+              setImportProgress({ done: 0, total: list.length });
+              let created = [],
+                cursor = 0,
+                doneCount = 0,
+                CONCURRENCY = 3;
+              try {
+                let worker = async () => {
+                  while (cursor < list.length) {
+                    let idx = cursor++,
+                      file = list[idx],
+                      res = await N(
+                        file,
+                        file.name || `media-${idx + 1}`,
+                        source,
+                        idx === 0,
+                        !0,
+                      );
+                    res && created.push(res);
+                    doneCount += 1;
+                    setImportProgress({ done: doneCount, total: list.length });
+                    if (doneCount % 3 === 0) {
+                      R.enforceBudget();
+                      await new Promise((resYield) => setTimeout(resYield, 0));
+                    }
+                  }
+                };
+                await Promise.all(
+                  Array.from(
+                    { length: Math.min(CONCURRENCY, list.length) },
+                    worker,
+                  ),
+                );
+                R.enforceBudget();
+                await M();
+                g(
+                  `Imported ${created.length} media file(s) with active RAM governance`,
+                );
+                return created;
+              } finally {
+                setImportProgress(null);
+                m(!1);
+              }
+            },
+            [N, M],
           ),
           Ce = t(async () => {
             m(!0);
@@ -12322,29 +12982,93 @@ endobj
           );
         }, [j, N, P]);
         let F = async () => {
-            let e = await qe();
-            if (e.length !== 0) {
-              m(!0);
-              try {
-                for (let t = 0; t < e.length; t++)
-                  await N(e[t], e[t].name, `upload`, t === 0);
-                g(`Imported ${e.length} local file(s) into OPFS`);
-              } finally {
-                m(!1);
-              }
-            }
+            let files = await qe();
+            files.length > 0 && (await cfIngestMany(files, `upload`));
           },
           I = async () => {
-            let e = await Je();
-            e
-              ? (be(e),
-                r(`storage`),
-                g(
-                  `Mounted local folder /${e.name} (${e.entries.length} images found)`,
-                ))
-              : g(
-                  `Directory picker unavailable in this iframe — use Open Files or drag & drop`,
-                );
+            let folder = await Je();
+            if (!folder) {
+              g(
+                `Folder selection cancelled or unavailable — try Files or Gallery`,
+              );
+              return;
+            }
+            be(folder);
+            if (folder.files && folder.files.length > 0) {
+              await cfIngestMany(folder.files, `folder`);
+            } else {
+              r(`storage`);
+              g(
+                `Mounted local folder /${folder.name} (${folder.entries.length} files found)`,
+              );
+            }
+          },
+          cfBrowseDeviceGallery = async () => {
+            let files = await cfPickGalleryFiles();
+            if (!files.length) return;
+            let staged = [];
+            for (let idx = 0; idx < files.length; idx++) {
+              let file = files[idx],
+                meta = await cfInspectMedia(
+                  file,
+                  file.name || `gallery-${idx + 1}`,
+                ),
+                gid = `devgal-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+                thumbUrl = meta.thumbBlob
+                  ? R.createManagedBlobUrl(`${gid}-thumb`, meta.thumbBlob, !1)
+                  : meta.fallbackThumb;
+              staged.push({
+                id: gid,
+                assetId: null,
+                file,
+                name: file.name || `media-${idx + 1}`,
+                size: file.size,
+                mediaKind: meta.mediaKind,
+                formatExt: cfSafeExt(file.name, file.type),
+                thumbUrl,
+                imported: !1,
+              });
+              if ((idx + 1) % 4 === 0)
+                await new Promise((res) => setTimeout(res, 0));
+            }
+            setGalleryItems((prev) => [...staged, ...prev]);
+            setGallerySelected((prev) => [
+              ...new Set([...prev, ...staged.map((s) => s.id)]),
+            ]);
+          },
+          cfToggleGallerySelect = (gid) => {
+            setGallerySelected((prev) =>
+              prev.includes(gid)
+                ? prev.filter((x) => x !== gid)
+                : [...prev, gid],
+            );
+          },
+          cfImportSelectedGallery = async () => {
+            let chosen = galleryItems.filter((item) =>
+              gallerySelected.includes(item.id),
+            );
+            if (!chosen.length) return;
+            let newFiles = chosen
+              .filter((item) => item.file && !item.imported)
+              .map((item) => item.file);
+            if (newFiles.length > 0) {
+              await cfIngestMany(newFiles, `gallery`);
+              let importedIds = new Set(chosen.map((c) => c.id));
+              setGalleryItems((prev) =>
+                prev.map((item) =>
+                  importedIds.has(item.id)
+                    ? { ...item, imported: !0, file: null }
+                    : item,
+                ),
+              );
+            } else {
+              let firstExisting = chosen.find((item) => item.assetId);
+              firstExisting && f(firstExisting.assetId);
+            }
+            setGallerySelected([]);
+            setPortraitSheet(null);
+            setDesktopMediaModal(null);
+            setSheetMinimized(!1);
           },
           Ee = async (e, t) => {
             if (j) {
@@ -12508,7 +13232,7 @@ endobj
             }
           };
         return T(`div`, {
-          className: `h-screen w-screen overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100`,
+          className: `cf-app-shell flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 ${portraitSheet && !sheetMinimized ? `cf-scroll-lock` : ``}`,
           children: [
             w(Bt, {
               activeTab: e,
@@ -12522,6 +13246,7 @@ endobj
               },
               canExport: !!j,
               assetCount: l.length,
+              isPortrait,
             }),
             T(`main`, {
               className: `flex-1 min-h-0 flex relative overflow-hidden ${isPortrait ? `flex-col` : `flex-row`}`,
@@ -12546,26 +13271,33 @@ endobj
                         darkMode: s,
                         onToggleDarkMode: () => c((e) => !e),
                         onSelectAsset: f,
-                        onRemoveAsset: async (e) => {
-                          let t = l.find((t) => t.id === e);
-                          if (t) {
-                            (R.release(`${e}-orig`),
-                              R.release(`${e}-cur`),
-                              await Z.deleteFile(t.opfsOriginalPath));
-                            for (let e of t.historyIds) await Z.deleteFile(e);
-                            (u((t) => {
-                              let n = t.filter((t) => t.id !== e);
-                              return (d === e && f(n[0]?.id ?? null), n);
-                            }),
-                              await M());
+                        onRemoveAsset: async (id) => {
+                          let target = l.find((item) => item.id === id);
+                          if (target) {
+                            R.release(`${id}-orig`);
+                            R.release(`${id}-cur`);
+                            R.release(`${id}-thumb`);
+                            let paths = new Set([
+                              target.opfsOriginalPath,
+                              ...target.historyIds,
+                            ]);
+                            for (let path of paths) await Z.deleteFile(path);
+                            u((prev) => {
+                              let next = prev.filter((item) => item.id !== id);
+                              return (d === id && f(next[0]?.id ?? null), next);
+                            });
+                            await M();
                           }
                         },
                         onOpenFiles: F,
                         onMountFolder: I,
+                        onOpenGallery: () => openMediaDrawer(`gallery`),
+                        onOpenMediaView: () => openMediaDrawer(`media-view`),
+                        isPortrait,
+                        importProgress,
                         onLoadSamples: Ce,
-                        onDropFiles: async (e) => {
-                          for (let t = 0; t < e.length; t++)
-                            await N(e[t], e[t].name, `upload`, t === 0);
+                        onDropFiles: async (files) => {
+                          await cfIngestMany(files, `upload`);
                         },
                         onUndo: () => j && P(j, j.historyIndex - 1),
                         onRedo: () => j && P(j, j.historyIndex + 1),
@@ -12632,6 +13364,237 @@ endobj
                           (e !== null && fe(e), me(t), D(n));
                         },
                       });
+                    let galleryDrawerPanel = T(`div`, {
+                        className: `h-full flex flex-col bg-white dark:bg-slate-900`,
+                        children: [
+                          T(`div`, {
+                            className: `px-3 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0`,
+                            children: [
+                              T(`button`, {
+                                type: `button`,
+                                "data-testid": `gallery-browse-device-btn`,
+                                onClick: cfBrowseDeviceGallery,
+                                className: `inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors`,
+                                children: [
+                                  w(cfImages, { className: `w-3.5 h-3.5` }),
+                                  w(`span`, {
+                                    children: `Browse Device Gallery`,
+                                  }),
+                                ],
+                              }),
+                              galleryItems.length > 0 &&
+                                w(`button`, {
+                                  type: `button`,
+                                  onClick: () =>
+                                    setGallerySelected((prev) =>
+                                      prev.length === galleryItems.length
+                                        ? []
+                                        : galleryItems.map((it) => it.id),
+                                    ),
+                                  className: `px-2.5 py-1 text-xs font-medium rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200`,
+                                  children:
+                                    gallerySelected.length ===
+                                    galleryItems.length
+                                      ? `Clear All`
+                                      : `Select All (${galleryItems.length})`,
+                                }),
+                            ],
+                          }),
+                          w(`div`, {
+                            className: `flex-1 min-h-0 overflow-y-auto p-3 cf-sheet-body`,
+                            children:
+                              galleryItems.length === 0
+                                ? T(`div`, {
+                                    className: `py-10 text-center flex flex-col items-center gap-2`,
+                                    children: [
+                                      w(cfImages, {
+                                        className: `w-8 h-8 text-slate-400`,
+                                      }),
+                                      w(`p`, {
+                                        className: `text-xs font-semibold text-slate-800 dark:text-slate-100`,
+                                        children: `Multi-Select Device Gallery`,
+                                      }),
+                                      w(`p`, {
+                                        className: `text-[11px] text-slate-500 dark:text-slate-400 max-w-xs`,
+                                        children: `Tap "Browse Device Gallery" to pick multiple photos, videos, or any media format at once.`,
+                                      }),
+                                    ],
+                                  })
+                                : w(`div`, {
+                                    className: `cf-gallery-grid`,
+                                    children: galleryItems.map((item) => {
+                                      let checked = gallerySelected.includes(
+                                        item.id,
+                                      );
+                                      return T(
+                                        `button`,
+                                        {
+                                          type: `button`,
+                                          "data-testid": `gallery-card-${item.id}`,
+                                          onClick: () =>
+                                            cfToggleGallerySelect(item.id),
+                                          className: `cf-gallery-card ${checked ? `cf-gallery-card-selected` : ``}`,
+                                          children: [
+                                            w(`img`, {
+                                              src: item.thumbUrl,
+                                              alt: item.name,
+                                              loading: `lazy`,
+                                              decoding: `async`,
+                                              className: `w-full h-full object-cover`,
+                                            }),
+                                            item.mediaKind === `video` &&
+                                              w(`span`, {
+                                                className: `cf-video-badge`,
+                                                children: w(cfFilm, {
+                                                  className: `w-2.5 h-2.5`,
+                                                }),
+                                              }),
+                                            w(`span`, {
+                                              className: `cf-gallery-check ${checked ? `cf-gallery-check-on` : ``}`,
+                                              children: checked
+                                                ? w(cfCheck, {
+                                                    className: `w-3 h-3`,
+                                                  })
+                                                : null,
+                                            }),
+                                            w(`span`, {
+                                              className: `cf-gallery-caption`,
+                                              children: item.name,
+                                            }),
+                                          ],
+                                        },
+                                        item.id,
+                                      );
+                                    }),
+                                  }),
+                          }),
+                          gallerySelected.length > 0 &&
+                            T(`div`, {
+                              className: `px-3 py-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0 bg-slate-50 dark:bg-slate-950`,
+                              children: [
+                                w(`span`, {
+                                  className: `text-xs font-medium text-slate-600 dark:text-slate-300`,
+                                  children: `${gallerySelected.length} selected`,
+                                }),
+                                w(`button`, {
+                                  type: `button`,
+                                  "data-testid": `gallery-import-selected-btn`,
+                                  onClick: cfImportSelectedGallery,
+                                  className: `px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg`,
+                                  children: `Add Selected (${gallerySelected.length})`,
+                                }),
+                              ],
+                            }),
+                        ],
+                      }),
+                      uploadedMediaPanel = T(`div`, {
+                        className: `h-full flex flex-col bg-white dark:bg-slate-900`,
+                        children: [
+                          T(`div`, {
+                            className: `px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 shrink-0`,
+                            children: [
+                              w(`span`, {
+                                children: `${l.length} uploaded media · Tap any item to preview`,
+                              }),
+                              w(`button`, {
+                                type: `button`,
+                                onClick: F,
+                                className: `px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-md`,
+                                children: `+ Add More`,
+                              }),
+                            ],
+                          }),
+                          w(`div`, {
+                            className: `flex-1 min-h-0 overflow-y-auto p-3 cf-sheet-body`,
+                            children: w(`div`, {
+                              className: `cf-gallery-grid`,
+                              children: l.map((item) => {
+                                let isActive = j?.id === item.id;
+                                return T(
+                                  `button`,
+                                  {
+                                    type: `button`,
+                                    "data-testid": `media-view-item-${item.id}`,
+                                    onClick: () => {
+                                      f(item.id);
+                                      setPortraitSheet(null);
+                                      setDesktopMediaModal(null);
+                                      setSheetMinimized(!1);
+                                    },
+                                    className: `cf-gallery-card ${isActive ? `cf-gallery-card-selected` : ``}`,
+                                    children: [
+                                      w(`img`, {
+                                        src: item.thumbUrl || item.previewUrl,
+                                        alt: item.name,
+                                        loading: `lazy`,
+                                        decoding: `async`,
+                                        className: `w-full h-full object-cover`,
+                                      }),
+                                      item.mediaKind === `video` &&
+                                        w(`span`, {
+                                          className: `cf-video-badge`,
+                                          children: w(cfFilm, {
+                                            className: `w-2.5 h-2.5`,
+                                          }),
+                                        }),
+                                      isActive &&
+                                        w(`span`, {
+                                          className: `cf-gallery-check cf-gallery-check-on`,
+                                          children: w(cfCheck, {
+                                            className: `w-3 h-3`,
+                                          }),
+                                        }),
+                                      w(`span`, {
+                                        className: `cf-gallery-caption`,
+                                        children: `${item.name} · ${z(item.currentBytes)}`,
+                                      }),
+                                    ],
+                                  },
+                                  item.id,
+                                );
+                              }),
+                            }),
+                          }),
+                        ],
+                      }),
+                      sheetTitleMap = {
+                        tools: `All 80 Tools`,
+                        controls: `Tool Controls`,
+                        gallery: `Gallery (${galleryItems.length})`,
+                        "media-view": `Uploaded Media (${l.length})`,
+                      },
+                      onSheetHeaderPointerDown = (ev) => {
+                        if (ev.target.closest(`button`)) return;
+                        ev.currentTarget.setPointerCapture?.(ev.pointerId);
+                        sheetDragRef.current = {
+                          startY: ev.clientY,
+                          wasMinimized: sheetMinimized,
+                          moved: !1,
+                        };
+                      },
+                      onSheetHeaderPointerMove = (ev) => {
+                        if (!sheetDragRef.current) return;
+                        let dy = ev.clientY - sheetDragRef.current.startY;
+                        if (Math.abs(dy) > 4) sheetDragRef.current.moved = !0;
+                        if (!sheetDragRef.current.wasMinimized) {
+                          setSheetDragY(Math.max(0, Math.min(340, dy)));
+                        } else {
+                          setSheetDragY(Math.min(0, Math.max(-220, dy)));
+                        }
+                      },
+                      onSheetHeaderPointerUp = (ev) => {
+                        if (!sheetDragRef.current) return;
+                        let { startY, wasMinimized, moved } =
+                            sheetDragRef.current,
+                          dy = ev.clientY - startY;
+                        sheetDragRef.current = null;
+                        setSheetDragY(0);
+                        if (!wasMinimized && dy > 44) {
+                          setSheetMinimized(!0);
+                        } else if (wasMinimized && (dy < -32 || !moved)) {
+                          setSheetMinimized(!1);
+                        }
+                      };
                     return isPortrait
                       ? T(he, {
                           children: [
@@ -12640,40 +13603,93 @@ endobj
                               children: stagePanel,
                             }),
                             portraitSheet &&
+                              !sheetMinimized &&
                               w(`div`, {
-                                onClick: () => setPortraitSheet(null),
-                                className: `fixed inset-0 z-20 bg-black/45`,
+                                "data-testid": `sheet-backdrop`,
+                                onClick: () => {
+                                  (setPortraitSheet(null),
+                                    setSheetMinimized(!1));
+                                },
+                                onTouchMove: (ev) => ev.preventDefault(),
+                                onWheel: (ev) => ev.preventDefault(),
+                                className: `cf-sheet-backdrop`,
                               }),
                             T(`div`, {
-                              className: `cf-sheet ${portraitSheet ? `cf-sheet-open` : ``} bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800`,
+                              "data-testid": `portrait-sheet`,
+                              "data-minimized": sheetMinimized
+                                ? `true`
+                                : `false`,
+                              style:
+                                sheetDragY !== 0
+                                  ? {
+                                      transform: `translate3d(0, ${sheetDragY}px, 0)`,
+                                      transition: `none`,
+                                    }
+                                  : void 0,
+                              className: `cf-sheet ${portraitSheet ? (sheetMinimized ? (focusMode ? `cf-sheet-minimized cf-sheet-minimized-focus` : `cf-sheet-minimized`) : `cf-sheet-open`) : ``} bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800`,
                               children: [
                                 T(`div`, {
-                                  className: `px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0`,
+                                  "data-testid": `sheet-drag-header`,
+                                  onPointerDown: onSheetHeaderPointerDown,
+                                  onPointerMove: onSheetHeaderPointerMove,
+                                  onPointerUp: onSheetHeaderPointerUp,
+                                  onPointerCancel: onSheetHeaderPointerUp,
+                                  className: `cf-sheet-header border-b border-slate-200 dark:border-slate-800`,
                                   children: [
-                                    w(`span`, {
-                                      className: `text-xs font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100`,
-                                      children:
-                                        portraitSheet === `tools`
-                                          ? `All 80 Tools`
-                                          : `Tool Controls`,
-                                    }),
-                                    w(`button`, {
-                                      type: `button`,
-                                      onClick: () => setPortraitSheet(null),
-                                      className: `px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100`,
-                                      children: `Done`,
+                                    w(`div`, { className: `cf-sheet-handle` }),
+                                    T(`div`, {
+                                      className: `w-full flex items-center justify-between gap-2`,
+                                      children: [
+                                        w(`span`, {
+                                          className: `text-xs font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100 truncate`,
+                                          children:
+                                            (portraitSheet &&
+                                              sheetTitleMap[portraitSheet]) ||
+                                            `Drawer`,
+                                        }),
+                                        T(`div`, {
+                                          className: `flex items-center gap-1.5 shrink-0`,
+                                          children: [
+                                            w(`button`, {
+                                              type: `button`,
+                                              "data-testid": `sheet-toggle-min-btn`,
+                                              onClick: () =>
+                                                setSheetMinimized((v) => !v),
+                                              className: `px-2 py-1 text-[11px] font-semibold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200`,
+                                              children: sheetMinimized
+                                                ? `Expand`
+                                                : `Dock`,
+                                            }),
+                                            w(`button`, {
+                                              type: `button`,
+                                              "data-testid": `sheet-done-btn`,
+                                              onClick: () => {
+                                                (setPortraitSheet(null),
+                                                  setSheetMinimized(!1));
+                                              },
+                                              className: `px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100`,
+                                              children: `Done`,
+                                            }),
+                                          ],
+                                        }),
+                                      ],
                                     }),
                                   ],
                                 }),
-                                w(`div`, {
-                                  className: `flex-1 min-h-0 overflow-hidden cf-drawer-inner`,
-                                  children:
-                                    portraitSheet === `tools`
-                                      ? toolsPanel
-                                      : portraitSheet === `controls`
-                                        ? controlsPanel
-                                        : null,
-                                }),
+                                !sheetMinimized &&
+                                  w(`div`, {
+                                    className: `flex-1 min-h-0 overflow-hidden cf-drawer-inner cf-sheet-body`,
+                                    children:
+                                      portraitSheet === `tools`
+                                        ? toolsPanel
+                                        : portraitSheet === `controls`
+                                          ? controlsPanel
+                                          : portraitSheet === `gallery`
+                                            ? galleryDrawerPanel
+                                            : portraitSheet === `media-view`
+                                              ? uploadedMediaPanel
+                                              : null,
+                                  }),
                               ],
                             }),
                             focusMode
@@ -12684,32 +13700,31 @@ endobj
                                   children: `Show Dock`,
                                 })
                               : T(`nav`, {
-                                  className: `h-12 shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 grid grid-cols-3 gap-1.5 px-2 py-1.5`,
+                                  "data-testid": `mobile-bottom-dock`,
+                                  className: `cf-bottom-dock border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 grid grid-cols-3 gap-1.5 px-2 py-1.5`,
                                   children: [
                                     w(`button`, {
                                       type: `button`,
+                                      "data-testid": `dock-tools-btn`,
                                       onClick: () =>
-                                        setPortraitSheet((cur) =>
-                                          cur === `tools` ? null : `tools`,
-                                        ),
+                                        openPortraitDrawer(`tools`),
                                       className: `rounded-md text-xs font-semibold border transition-colors ${portraitSheet === `tools` ? `bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900` : `bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`}`,
                                       children: `Tools (80)`,
                                     }),
                                     w(`button`, {
                                       type: `button`,
+                                      "data-testid": `dock-controls-btn`,
                                       onClick: () =>
-                                        setPortraitSheet((cur) =>
-                                          cur === `controls`
-                                            ? null
-                                            : `controls`,
-                                        ),
+                                        openPortraitDrawer(`controls`),
                                       className: `rounded-md text-xs font-semibold border transition-colors ${portraitSheet === `controls` ? `bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900` : `bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`}`,
                                       children: `Controls`,
                                     }),
                                     w(`button`, {
                                       type: `button`,
+                                      "data-testid": `dock-focus-btn`,
                                       onClick: () => {
                                         (setPortraitSheet(null),
+                                          setSheetMinimized(!1),
                                           setFocusMode(!0));
                                       },
                                       className: `rounded-md text-xs font-semibold border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`,
@@ -12772,6 +13787,44 @@ endobj
                               className: `cf-drawer-side cf-drawer-inner border-l border-slate-200 dark:border-slate-800 ${rightDrawerOpen && !focusMode ? `cf-drawer-right-open` : `cf-drawer-closed`}`,
                               children: controlsPanel,
                             }),
+                            desktopMediaModal &&
+                              T(he, {
+                                children: [
+                                  w(`div`, {
+                                    onClick: () => setDesktopMediaModal(null),
+                                    className: `cf-sheet-backdrop`,
+                                  }),
+                                  T(`div`, {
+                                    className: `cf-desktop-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800`,
+                                    children: [
+                                      T(`div`, {
+                                        className: `px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between`,
+                                        children: [
+                                          w(`span`, {
+                                            className: `text-xs font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100`,
+                                            children:
+                                              sheetTitleMap[desktopMediaModal],
+                                          }),
+                                          w(`button`, {
+                                            type: `button`,
+                                            onClick: () =>
+                                              setDesktopMediaModal(null),
+                                            className: `px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100`,
+                                            children: `Close`,
+                                          }),
+                                        ],
+                                      }),
+                                      w(`div`, {
+                                        className: `flex-1 min-h-0 overflow-hidden`,
+                                        children:
+                                          desktopMediaModal === `gallery`
+                                            ? galleryDrawerPanel
+                                            : uploadedMediaPanel,
+                                      }),
+                                    ],
+                                  }),
+                                ],
+                              }),
                           ],
                         });
                   })(),
@@ -15019,28 +16072,327 @@ endobj
         pointer-events: none;
         border-width: 0 !important;
       }
+      html,
+      body,
+      #root {
+        height: 100dvh;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+      .cf-app-shell {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+      .cf-scroll-lock {
+        touch-action: none;
+        overscroll-behavior: none;
+      }
+      .cf-top-header {
+        position: relative;
+        z-index: 45;
+      }
+      .cf-nav-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .cf-nav-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .dark .cf-nav-trigger {
+        border-color: #334155;
+        background: #1e293b;
+        color: #f8fafc;
+      }
+      .cf-rot-180 {
+        transform: rotate(180deg);
+      }
+      .cf-nav-dropdown {
+        position: absolute;
+        left: 0;
+        top: calc(100% + 8px);
+        min-width: 176px;
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        z-index: 60;
+      }
+      .dark .cf-nav-dropdown {
+        border-color: #334155;
+        background: #0f172a;
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+      }
+      .cf-nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #334155;
+        text-align: left;
+        cursor: pointer;
+      }
+      .cf-nav-item:hover {
+        background: #f1f5f9;
+      }
+      .cf-nav-item-active {
+        background: #eff6ff;
+        color: #2563eb;
+        font-weight: 600;
+      }
+      .dark .cf-nav-item {
+        color: #cbd5e1;
+      }
+      .dark .cf-nav-item:hover {
+        background: #1e293b;
+      }
+      .dark .cf-nav-item-active {
+        background: rgba(37, 99, 235, 0.22);
+        color: #60a5fa;
+      }
+      .cf-bottom-dock {
+        position: relative;
+        z-index: 40;
+        flex-shrink: 0;
+        min-height: 48px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+      }
       .cf-drawer-inner > aside {
         width: 100% !important;
         height: 100% !important;
         border: 0 !important;
       }
+      .cf-drawer-inner > aside > div:last-child {
+        max-height: none !important;
+      }
+      .cf-sheet-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        background: rgba(2, 6, 23, 0.48);
+        touch-action: none;
+        overscroll-behavior: none;
+      }
       .cf-sheet {
         position: fixed;
         left: 0;
         right: 0;
-        bottom: 48px;
-        height: 68vh;
-        z-index: 30;
+        bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+        height: 68dvh;
+        z-index: 35;
         display: flex;
         flex-direction: column;
         border-radius: 16px 16px 0 0;
-        transform: translateY(115%);
-        transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.16);
+        transform: translate3d(0, 120%, 0);
+        transition:
+          transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+          height 220ms ease,
+          bottom 220ms ease,
+          border-radius 220ms ease;
         pointer-events: none;
+        overflow: hidden;
       }
       .cf-sheet-open {
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
         pointer-events: auto;
+      }
+      .cf-sheet-minimized {
+        bottom: calc(122px + env(safe-area-inset-bottom, 0px));
+        height: 44px;
+        border-radius: 12px 12px 0 0;
+        transform: translate3d(0, 0, 0);
+        pointer-events: auto;
+        box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.12);
+      }
+      .cf-sheet-minimized-focus {
+        bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+      }
+      .cf-sheet-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 5px 14px 7px;
+        min-height: 44px;
+        flex-shrink: 0;
+        touch-action: none;
+        user-select: none;
+        cursor: grab;
+      }
+      .cf-sheet-header:active {
+        cursor: grabbing;
+      }
+      .cf-sheet-handle {
+        width: 38px;
+        height: 4px;
+        border-radius: 999px;
+        background: #cbd5e1;
+      }
+      .dark .cf-sheet-handle {
+        background: #475569;
+      }
+      .cf-sheet-body {
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+      .cf-filmstrip-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+        padding-left: 8px;
+        border-left: 1px solid #e2e8f0;
+      }
+      .dark .cf-filmstrip-actions {
+        border-left-color: #1e293b;
+      }
+      .cf-gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      @media (min-width: 640px) {
+        .cf-gallery-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+      }
+      .cf-gallery-card {
+        position: relative;
+        aspect-ratio: 1 / 1;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 2px solid #e2e8f0;
+        background: #0f172a;
+        padding: 0;
+        cursor: pointer;
+      }
+      .dark .cf-gallery-card {
+        border-color: #1e293b;
+      }
+      .cf-gallery-card-selected {
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.28);
+      }
+      .cf-gallery-check {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        border: 2px solid #ffffff;
+        background: rgba(15, 23, 42, 0.55);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cf-gallery-check-on {
+        background: #2563eb;
+        border-color: #ffffff;
+      }
+      .cf-gallery-caption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 3px 6px;
+        font-size: 10px;
+        font-weight: 500;
+        color: #ffffff;
+        background: linear-gradient(
+          to top,
+          rgba(2, 6, 23, 0.85),
+          rgba(2, 6, 23, 0)
+        );
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: left;
+      }
+      .cf-video-badge {
+        position: absolute;
+        left: 4px;
+        top: 4px;
+        padding: 2px 4px;
+        border-radius: 4px;
+        background: rgba(15, 23, 42, 0.78);
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cf-import-pill {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 25;
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.88);
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+      .cf-media-fallback-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 18px 22px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid #cbd5e1;
+      }
+      .dark .cf-media-fallback-card {
+        background: rgba(15, 23, 42, 0.94);
+        border-color: #334155;
+      }
+      .cf-desktop-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(680px, 92vw);
+        height: min(560px, 82vh);
+        z-index: 45;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(2, 6, 23, 0.32);
       }
       ::-webkit-scrollbar {
         width: 6px;
