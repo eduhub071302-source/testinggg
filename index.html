@@ -1853,7 +1853,7 @@
           renderedBoxH = Math.round(baseFitH * layoutZoom),
           effectivePixelRatio = (baseFitW * zoom) / mediaNatW,
           useCrispPixels = effectivePixelRatio >= 2.25;
-        n(() => {
+        (() => {
           let el = vpRef.current;
           if (!el) return;
           let update = () => {
