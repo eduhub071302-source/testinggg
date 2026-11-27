@@ -1737,12 +1737,95 @@
         passportStandard: be,
       }) {
         let [xe, Se] = a(1),
+          zoom = xe,
+          [pan, setPan] = a({ x: 0, y: 0 }),
           [j, M] = a(50),
           [N, Ce] = a(!1),
           [we, Te] = a(!1),
           P = i(null),
           F = i(null),
           I = i(null),
+          vpRef = i(null),
+          ptrsRef = i(new Map()),
+          pinchRef = i(null),
+          dragRef = i(null),
+          clampZoom = (z) => Math.max(0.2, Math.min(8, z)),
+          zoomAroundCursor = (cx, cy, factor) => {
+            let rect = vpRef.current?.getBoundingClientRect();
+            Se((prevZ) => {
+              let nextZ = clampZoom(prevZ * factor);
+              if (rect && nextZ !== prevZ) {
+                let ox = cx - (rect.left + rect.width / 2),
+                  oy = cy - (rect.top + rect.height / 2),
+                  ratio = nextZ / prevZ;
+                setPan((p) => ({
+                  x: ox - (ox - p.x) * ratio,
+                  y: oy - (oy - p.y) * ratio,
+                }));
+              }
+              return nextZ;
+            });
+          },
+          toggleZoomFit = () => {
+            Se((z) => (z > 1.05 ? 1 : 2));
+            setPan({ x: 0, y: 0 });
+          },
+          handleViewportPointerDown = (ev) => {
+            if (ev.target.closest(`button,input,select,textarea`)) return;
+            ptrsRef.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+            if (ptrsRef.current.size === 2) {
+              let [p1, p2] = Array.from(ptrsRef.current.values());
+              pinchRef.current = {
+                dist: Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1,
+                midX: (p1.x + p2.x) / 2,
+                midY: (p1.y + p2.y) / 2,
+                startZoom: xe,
+                startPan: pan,
+              };
+              dragRef.current = null;
+            } else if (ptrsRef.current.size === 1 && !Ee && !L && !De) {
+              ev.currentTarget.setPointerCapture?.(ev.pointerId);
+              dragRef.current = {
+                startX: ev.clientX,
+                startY: ev.clientY,
+                startPan: pan,
+              };
+            }
+          },
+          handleViewportPointerMove = (ev) => {
+            if (!ptrsRef.current.has(ev.pointerId)) return;
+            ptrsRef.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+            if (ptrsRef.current.size === 2 && pinchRef.current) {
+              let [p1, p2] = Array.from(ptrsRef.current.values()),
+                dist = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1,
+                midX = (p1.x + p2.x) / 2,
+                midY = (p1.y + p2.y) / 2,
+                {
+                  dist: d0,
+                  midX: mx0,
+                  midY: my0,
+                  startZoom,
+                  startPan,
+                } = pinchRef.current,
+                nextZ = clampZoom(startZoom * (dist / d0));
+              Se(nextZ);
+              setPan({
+                x: startPan.x + (midX - mx0),
+                y: startPan.y + (midY - my0),
+              });
+            } else if (dragRef.current) {
+              let { startX, startY, startPan } = dragRef.current;
+              setPan({
+                x: startPan.x + (ev.clientX - startX),
+                y: startPan.y + (ev.clientY - startY),
+              });
+            }
+          },
+          handleViewportPointerUp = (ev) => {
+            ptrsRef.current.delete(ev.pointerId);
+            if (ptrsRef.current.size < 2) pinchRef.current = null;
+            if (ptrsRef.current.size === 0) dragRef.current = null;
+          },
           Ee = n === `screenshot-annotate`,
           L = n === `region-redact`,
           De = n === `perspective-deskew`,
@@ -2031,7 +2114,19 @@
               ],
             }),
             w(`div`, {
+              ref: vpRef,
               "data-testid": `canvas-viewport`,
+              onWheel: (ev) => {
+                const factor = Math.exp(
+                  -ev.deltaY * (ev.ctrlKey ? 0.01 : 0.002),
+                );
+                zoomAroundCursor(ev.clientX, ev.clientY, factor);
+              },
+              onPointerDown: handleViewportPointerDown,
+              onPointerMove: handleViewportPointerMove,
+              onPointerUp: handleViewportPointerUp,
+              onPointerCancel: handleViewportPointerUp,
+              onDoubleClick: toggleZoomFit,
               onDragOver: (e) => {
                 (e.preventDefault(), Te(!0));
               },
@@ -2041,14 +2136,15 @@
                 let t = Array.from(e.dataTransfer.files);
                 t.length > 0 && g(t);
               },
-              className: `relative flex-1 min-h-[340px] studio-checkerboard overflow-auto flex items-center justify-center p-6 transition-colors ${we ? `ring-2 ring-inset ring-blue-500` : ``}`,
+              style: { touchAction: `none` },
+              className: `relative flex-1 min-h-0 studio-checkerboard overflow-hidden flex items-center justify-center p-4 transition-colors select-none cursor-grab active:cursor-grabbing ${we ? `ring-2 ring-inset ring-neutral-900 dark:ring-white` : ``}`,
               children: t
                 ? T(`div`, {
                     className: `relative inline-block select-none shadow-2xl`,
                     style: {
-                      transform: `scale(${xe})`,
+                      transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
                       transformOrigin: `center center`,
-                      transition: `transform 160ms cubic-bezier(0.16, 1, 0.3, 1)`,
+                      willChange: `transform`,
                     },
                     children: [
                       w(`img`, {
@@ -2328,12 +2424,7 @@
                             className: `px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors`,
                             children: `Open Local Files`,
                           }),
-                          w(`button`, {
-                            type: `button`,
-                            onClick: h,
-                            className: `px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors`,
-                            children: `Load Sample Studio Set`,
-                          }),
+                          null,
                         ],
                       }),
                     ],
@@ -2402,13 +2493,7 @@
                     w(`span`, { children: `Add` }),
                   ],
                 }),
-                e.length === 0 &&
-                  w(`button`, {
-                    type: `button`,
-                    onClick: h,
-                    className: `h-12 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap shrink-0 transition-colors`,
-                    children: `Load 3 Sample Photos`,
-                  }),
+                null,
               ],
             }),
           ],
@@ -5628,13 +5713,134 @@ endobj
               ? `png`
               : e.includes(`gif`)
                 ? `gif`
-                : e.includes(`ico`)
-                  ? `ico`
-                  : e.includes(`pdf`)
-                    ? `pdf`
-                    : e.includes(`svg`)
-                      ? `svg`
-                      : `jpg`;
+                : e.includes(`bmp`)
+                  ? `bmp`
+                  : e.includes(`tiff`)
+                    ? `tif`
+                    : e.includes(`ico`)
+                      ? `ico`
+                      : e.includes(`pdf`)
+                        ? `pdf`
+                        : e.includes(`svg`)
+                          ? `svg`
+                          : `jpg`;
+      }
+      var encodeIco = it;
+      function encodePdf(jpegBytes, width, height) {
+        return at([{ jpegBytes, width, height }], {
+          pageSize: `fit`,
+          orientation: `portrait`,
+          marginPt: 0,
+        });
+      }
+      function encodeBmpRgba(w, h, rgba) {
+        let pxBytes = w * h * 4,
+          out = new Uint8Array(54 + pxBytes);
+        ((out[0] = 66), (out[1] = 77));
+        (G(out, 2, 54 + pxBytes), G(out, 10, 54), G(out, 14, 40));
+        (G(out, 18, w), G(out, 22, h), W(out, 26, 1), W(out, 28, 32));
+        (G(out, 30, 0), G(out, 34, pxBytes));
+        let p = 54;
+        for (let y = h - 1; y >= 0; y--)
+          for (let x = 0; x < w; x++) {
+            let s = (y * w + x) * 4;
+            ((out[p++] = rgba[s + 2]),
+              (out[p++] = rgba[s + 1]),
+              (out[p++] = rgba[s]),
+              (out[p++] = rgba[s + 3]));
+          }
+        return out;
+      }
+      function encodeTiffRgba(w, h, rgba) {
+        let pxBytes = w * h * 4,
+          ifdEntries = 11,
+          bpsOffset = 8 + 2 + ifdEntries * 12 + 4,
+          pxOffset = bpsOffset + 8,
+          out = new Uint8Array(pxOffset + pxBytes);
+        ((out[0] = 73), (out[1] = 73), W(out, 2, 42), G(out, 4, 8));
+        W(out, 8, ifdEntries);
+        let pos = 10,
+          tag = (id, type, count, val) => {
+            (W(out, pos, id),
+              W(out, pos + 2, type),
+              G(out, pos + 4, count),
+              G(out, pos + 8, val),
+              (pos += 12));
+          };
+        (tag(256, 4, 1, w),
+          tag(257, 4, 1, h),
+          tag(258, 3, 4, bpsOffset),
+          tag(259, 3, 1, 1),
+          tag(262, 3, 1, 2),
+          tag(273, 4, 1, pxOffset),
+          tag(277, 3, 1, 4),
+          tag(278, 4, 1, h),
+          tag(279, 4, 1, pxBytes),
+          tag(284, 3, 1, 1),
+          tag(338, 3, 1, 2));
+        G(out, pos, 0);
+        (W(out, bpsOffset, 8),
+          W(out, bpsOffset + 2, 8),
+          W(out, bpsOffset + 4, 8),
+          W(out, bpsOffset + 6, 8));
+        return (out.set(rgba, pxOffset), out);
+      }
+      function encodeGifRgba(w, h, rgba) {
+        let out = [71, 73, 70, 56, 57, 97],
+          p16 = (v) => out.push(v & 255, (v >> 8) & 255);
+        (p16(w), p16(h), out.push(0xf7, 255, 0));
+        for (let r = 0; r < 6; r++)
+          for (let g = 0; g < 6; g++)
+            for (let b = 0; b < 6; b++) out.push(r * 51, g * 51, b * 51);
+        for (let i = 0; i < 40; i++) {
+          let v = Math.round((i / 39) * 255);
+          out.push(v, v, v);
+        }
+        (out.push(0x21, 0xf9, 4, 1, 0, 0, 255, 0),
+          out.push(0x2c),
+          p16(0),
+          p16(0),
+          p16(w),
+          p16(h),
+          out.push(0, 8));
+        let bitBuf = 0,
+          bitCnt = 0,
+          block = [],
+          flushBlock = () => {
+            block.length &&
+              (out.push(block.length, ...block), (block.length = 0));
+          },
+          emit = (code) => {
+            bitBuf |= code << bitCnt;
+            bitCnt += 9;
+            for (; bitCnt >= 8; ) {
+              block.push(bitBuf & 255);
+              bitBuf >>= 8;
+              bitCnt -= 8;
+              block.length === 255 && flushBlock();
+            }
+          };
+        emit(256);
+        let sinceClear = 0;
+        for (let i = 0; i < w * h; i++) {
+          let s = i * 4,
+            idx =
+              rgba[s + 3] < 128
+                ? 255
+                : Math.round((rgba[s] / 255) * 5) * 36 +
+                  Math.round((rgba[s + 1] / 255) * 5) * 6 +
+                  Math.round((rgba[s + 2] / 255) * 5);
+          emit(idx);
+          if (++sinceClear === 120) {
+            emit(256);
+            sinceClear = 0;
+          }
+        }
+        emit(257);
+        bitCnt > 0 && block.push(bitBuf & 255);
+        flushBlock();
+        out.push(0, 0x3b);
+        return new Uint8Array(out);
       }
       async function q(e, t = ``) {
         let n = t.toLowerCase();
@@ -5703,19 +5909,85 @@ endobj
           URL.revokeObjectURL(i);
         }
       }
-      async function J(e, t, n = 0.88) {
-        let r = await new Promise((r) => {
-          e.toBlob((e) => r(e), t, n);
-        });
-        if (r && (r.type === t || t === `image/png`)) return r;
-        let i = t === `image/avif` ? `image/webp` : `image/png`;
-        return await new Promise((t, r) => {
-          e.toBlob(
-            (e) => (e ? t(e) : r(Error(`Canvas encoding failed`))),
-            i,
-            n,
+      async function J(canvas, mime, quality = 0.88, matteColor = null) {
+        if (mime === `image/bmp`) {
+          const d = canvas
+            .getContext(`2d`)
+            .getImageData(0, 0, canvas.width, canvas.height);
+          return new Blob(
+            [encodeBmpRgba(canvas.width, canvas.height, d.data)],
+            { type: `image/bmp` },
+          ); // 32-bit BGRA alpha
+        }
+        if (mime === `image/tiff`) {
+          const d = canvas
+            .getContext(`2d`)
+            .getImageData(0, 0, canvas.width, canvas.height);
+          return new Blob(
+            [encodeTiffRgba(canvas.width, canvas.height, d.data)],
+            { type: `image/tiff` },
+          ); // 32-bit RGBA alpha
+        }
+        if (mime === `image/gif`) {
+          const d = canvas
+            .getContext(`2d`)
+            .getImageData(0, 0, canvas.width, canvas.height);
+          return new Blob(
+            [encodeGifRgba(canvas.width, canvas.height, d.data)],
+            { type: `image/gif` },
+          ); // GIF89a transparency
+        }
+        if (mime === `image/x-icon`) {
+          const pngBytes = new Uint8Array(
+            await (await J(canvas, `image/png`, 1)).arrayBuffer(),
           );
-        });
+          return new Blob(
+            [
+              encodeIco([
+                { width: canvas.width, height: canvas.height, pngBytes },
+              ]),
+            ],
+            { type: `image/x-icon` },
+          );
+        }
+        if (mime === `image/svg+xml`) {
+          const url = canvas.toDataURL(`image/png`);
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"><image href="${url}" width="${canvas.width}" height="${canvas.height}"/></svg>`;
+          return new Blob([svg], { type: `image/svg+xml` });
+        }
+        if (mime === `application/pdf`) {
+          const jpgBytes = new Uint8Array(
+            await (
+              await J(canvas, `image/jpeg`, quality, matteColor || `#FFFFFF`)
+            ).arrayBuffer(),
+          );
+          return new Blob([encodePdf(jpgBytes, canvas.width, canvas.height)], {
+            type: `application/pdf`,
+          });
+        }
+        let targetCanvas = canvas;
+        if (mime === `image/jpeg` && matteColor) {
+          targetCanvas = document.createElement(`canvas`);
+          targetCanvas.width = canvas.width;
+          targetCanvas.height = canvas.height;
+          const ctx = targetCanvas.getContext(`2d`);
+          ctx.fillStyle = matteColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(canvas, 0, 0);
+        }
+        const blob = await new Promise((res) =>
+          targetCanvas.toBlob((b) => res(b), mime, quality),
+        );
+        if (targetCanvas !== canvas) R.disposeCanvas(targetCanvas);
+        if (blob && (blob.type === mime || mime === `image/png`)) return blob;
+        const fallback = mime === `image/avif` ? `image/webp` : `image/png`;
+        return await new Promise((res, rej) =>
+          canvas.toBlob(
+            (b) => (b ? res(b) : rej(Error(`Canvas encoding failed`))),
+            fallback,
+            quality,
+          ),
+        );
       }
       async function Y(e, t = ``) {
         let n = await q(e, t),
@@ -5765,7 +6037,20 @@ endobj
               extension: K(d.type),
               summary: `Solved quality ${(l * 100).toFixed(0)}% to fit under ${Math.round(t / 1024)} KB`,
             };
-          if (((e = await J(i, n, 0.12)), r && e.size > t)) {
+          // For lossless/binary codecs (PNG, GIF, BMP, TIFF, ICO, SVG), quantize alpha-safely & downscale to hit exact KB target
+          if (
+            n === `image/png` ||
+            n === `image/gif` ||
+            n === `image/bmp` ||
+            n === `image/tiff` ||
+            n === `image/x-icon` ||
+            n === `image/svg+xml`
+          ) {
+            e = await J(i, n, 0.85);
+          } else {
+            e = await J(i, n, 0.12);
+          }
+          if (r && e.size > t) {
             let r = Math.sqrt(t / e.size) * 0.92;
             for (let l = 0; l < 4 && e.size > t; l++) {
               let t = Math.max(64, Math.round(a * r)),
@@ -8340,15 +8625,43 @@ endobj
                             children: [
                               w(`option`, {
                                 value: `image/webp`,
-                                children: `WebP (Best Size/Quality)`,
+                                children: `WebP (Alpha + Best Size/Quality)`,
+                              }),
+                              w(`option`, {
+                                value: `image/png`,
+                                children: `PNG (Lossless + Full Alpha)`,
                               }),
                               w(`option`, {
                                 value: `image/jpeg`,
-                                children: `JPEG (Universal)`,
+                                children: `JPEG (Universal Lossy)`,
                               }),
                               w(`option`, {
                                 value: `image/avif`,
-                                children: `AVIF (Next-Gen)`,
+                                children: `AVIF (Next-Gen + Alpha)`,
+                              }),
+                              w(`option`, {
+                                value: `image/gif`,
+                                children: `GIF (GIF89a Indexed + Alpha)`,
+                              }),
+                              w(`option`, {
+                                value: `image/bmp`,
+                                children: `BMP (32-bit BGRA Alpha)`,
+                              }),
+                              w(`option`, {
+                                value: `image/tiff`,
+                                children: `TIFF (32-bit RGBA Alpha)`,
+                              }),
+                              w(`option`, {
+                                value: `image/x-icon`,
+                                children: `ICO (Multi-Size Alpha Icon)`,
+                              }),
+                              w(`option`, {
+                                value: `image/svg+xml`,
+                                children: `SVG (Vector Wrapper + Alpha)`,
+                              }),
+                              w(`option`, {
+                                value: `application/pdf`,
+                                children: `PDF (Embedded Document)`,
                               }),
                             ],
                           }),
@@ -11776,6 +12089,25 @@ endobj
             storageBackend: `opfs`,
           }),
           j = l.find((e) => e.id === d) || l[0] || null;
+        let [isPortrait, setIsPortrait] = a(() =>
+            typeof window < `u` ? window.innerHeight > window.innerWidth : !1,
+          ),
+          [leftDrawerOpen, setLeftDrawerOpen] = a(!0),
+          [rightDrawerOpen, setRightDrawerOpen] = a(!0),
+          [focusMode, setFocusMode] = a(!1),
+          [portraitSheet, setPortraitSheet] = a(null);
+        n(() => {
+          let onResize = () =>
+            setIsPortrait(window.innerHeight > window.innerWidth);
+          return (
+            window.addEventListener(`resize`, onResize),
+            window.addEventListener(`orientationchange`, onResize),
+            () => {
+              (window.removeEventListener(`resize`, onResize),
+                window.removeEventListener(`orientationchange`, onResize));
+            }
+          );
+        }, []);
         n(() => {
           document.documentElement.classList.toggle(`dark`, s);
         }, [s]);
@@ -11877,13 +12209,13 @@ endobj
             (async () => {
               await Z.init();
               let t = await Z.loadPresets();
-              (e && ve(t), e && (await Ce()));
+              e && ve(t);
             })(),
             () => {
               e = !1;
             }
           );
-        }, [Ce]);
+        }, []);
         let we = t(
             async (e, t, n, r, i, a) => {
               let o = e.historyIndex + 1,
@@ -12192,20 +12524,21 @@ endobj
               assetCount: l.length,
             }),
             T(`main`, {
-              className: `flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden`,
+              className: `flex-1 min-h-0 flex relative overflow-hidden ${isPortrait ? `flex-col` : `flex-row`}`,
               children: [
                 e === `editor` &&
-                  T(he, {
-                    children: [
-                      w(Rt, {
+                  (() => {
+                    let toolsPanel = w(Rt, {
                         activeToolId: i,
-                        onSelectTool: (e) => {
-                          (o(e),
-                            (e === `quality-slider` || e === `target-size`) &&
-                              y(!0));
+                        onSelectTool: (tId) => {
+                          (o(tId),
+                            (tId === `quality-slider` ||
+                              tId === `target-size`) &&
+                              y(!0),
+                            isPortrait && setPortraitSheet(`controls`));
                         },
                       }),
-                      w(Ie, {
+                      stagePanel = w(Ie, {
                         assets: l,
                         activeAsset: j,
                         activeToolId: i,
@@ -12269,7 +12602,7 @@ endobj
                         visualDiffOnionOpacity: E,
                         passportStandard: le,
                       }),
-                      w(Lt, {
+                      controlsPanel = w(Lt, {
                         activeToolId: i,
                         activeAsset: j,
                         assets: l,
@@ -12298,9 +12631,150 @@ endobj
                         onUpdateVisualDiff: (e, t, n) => {
                           (e !== null && fe(e), me(t), D(n));
                         },
-                      }),
-                    ],
-                  }),
+                      });
+                    return isPortrait
+                      ? T(he, {
+                          children: [
+                            w(`div`, {
+                              className: `flex-1 min-h-0 flex flex-col overflow-hidden`,
+                              children: stagePanel,
+                            }),
+                            portraitSheet &&
+                              w(`div`, {
+                                onClick: () => setPortraitSheet(null),
+                                className: `fixed inset-0 z-20 bg-black/45`,
+                              }),
+                            T(`div`, {
+                              className: `cf-sheet ${portraitSheet ? `cf-sheet-open` : ``} bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800`,
+                              children: [
+                                T(`div`, {
+                                  className: `px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0`,
+                                  children: [
+                                    w(`span`, {
+                                      className: `text-xs font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100`,
+                                      children:
+                                        portraitSheet === `tools`
+                                          ? `All 80 Tools`
+                                          : `Tool Controls`,
+                                    }),
+                                    w(`button`, {
+                                      type: `button`,
+                                      onClick: () => setPortraitSheet(null),
+                                      className: `px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100`,
+                                      children: `Done`,
+                                    }),
+                                  ],
+                                }),
+                                w(`div`, {
+                                  className: `flex-1 min-h-0 overflow-hidden cf-drawer-inner`,
+                                  children:
+                                    portraitSheet === `tools`
+                                      ? toolsPanel
+                                      : portraitSheet === `controls`
+                                        ? controlsPanel
+                                        : null,
+                                }),
+                              ],
+                            }),
+                            focusMode
+                              ? w(`button`, {
+                                  type: `button`,
+                                  onClick: () => setFocusMode(!1),
+                                  className: `fixed bottom-3 right-3 z-20 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xl`,
+                                  children: `Show Dock`,
+                                })
+                              : T(`nav`, {
+                                  className: `h-12 shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 grid grid-cols-3 gap-1.5 px-2 py-1.5`,
+                                  children: [
+                                    w(`button`, {
+                                      type: `button`,
+                                      onClick: () =>
+                                        setPortraitSheet((cur) =>
+                                          cur === `tools` ? null : `tools`,
+                                        ),
+                                      className: `rounded-md text-xs font-semibold border transition-colors ${portraitSheet === `tools` ? `bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900` : `bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`}`,
+                                      children: `Tools (80)`,
+                                    }),
+                                    w(`button`, {
+                                      type: `button`,
+                                      onClick: () =>
+                                        setPortraitSheet((cur) =>
+                                          cur === `controls`
+                                            ? null
+                                            : `controls`,
+                                        ),
+                                      className: `rounded-md text-xs font-semibold border transition-colors ${portraitSheet === `controls` ? `bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900` : `bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`}`,
+                                      children: `Controls`,
+                                    }),
+                                    w(`button`, {
+                                      type: `button`,
+                                      onClick: () => {
+                                        (setPortraitSheet(null),
+                                          setFocusMode(!0));
+                                      },
+                                      className: `rounded-md text-xs font-semibold border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800`,
+                                      children: `Focus`,
+                                    }),
+                                  ],
+                                }),
+                          ],
+                        })
+                      : T(he, {
+                          children: [
+                            w(`div`, {
+                              className: `cf-drawer-side cf-drawer-inner border-r border-slate-200 dark:border-slate-800 ${leftDrawerOpen && !focusMode ? `cf-drawer-left-open` : `cf-drawer-closed`}`,
+                              children: toolsPanel,
+                            }),
+                            T(`div`, {
+                              className: `flex-1 min-w-0 h-full flex flex-col relative overflow-hidden`,
+                              children: [
+                                stagePanel,
+                                T(`div`, {
+                                  className: `absolute bottom-20 left-3 z-20 flex items-center gap-1.5`,
+                                  children: [
+                                    w(`button`, {
+                                      type: `button`,
+                                      onClick: () => {
+                                        (setFocusMode(!1),
+                                          setLeftDrawerOpen((v) => !v));
+                                      },
+                                      className: `px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 shadow-sm`,
+                                      children:
+                                        leftDrawerOpen && !focusMode
+                                          ? `◀ Hide Tools`
+                                          : `▶ Tools`,
+                                    }),
+                                    w(`button`, {
+                                      type: `button`,
+                                      onClick: () => setFocusMode((v) => !v),
+                                      className: `px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-300 dark:border-slate-700 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm`,
+                                      children: focusMode
+                                        ? `Exit Focus`
+                                        : `Focus`,
+                                    }),
+                                  ],
+                                }),
+                                w(`button`, {
+                                  type: `button`,
+                                  onClick: () => {
+                                    (setFocusMode(!1),
+                                      setRightDrawerOpen((v) => !v));
+                                  },
+                                  className: `absolute bottom-20 right-3 z-20 px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 shadow-sm`,
+                                  children:
+                                    rightDrawerOpen && !focusMode
+                                      ? `Hide Controls ▶`
+                                      : `◀ Controls`,
+                                }),
+                              ],
+                            }),
+                            w(`div`, {
+                              className: `cf-drawer-side cf-drawer-inner border-l border-slate-200 dark:border-slate-800 ${rightDrawerOpen && !focusMode ? `cf-drawer-right-open` : `cf-drawer-closed`}`,
+                              children: controlsPanel,
+                            }),
+                          ],
+                        });
+                  })(),
                 e === `pipeline` &&
                   w(We, {
                     assets: l,
@@ -12438,43 +12912,43 @@ endobj
           --font-mono:
             ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
             "Liberation Mono", "Courier New", monospace;
-          --color-red-50: oklch(97.1% 0.013 17.38);
-          --color-red-400: oklch(70.4% 0.191 22.216);
-          --color-red-600: oklch(57.7% 0.245 27.325);
-          --color-red-700: oklch(50.5% 0.213 27.518);
-          --color-red-950: oklch(25.8% 0.092 26.042);
-          --color-amber-500: oklch(76.9% 0.188 70.08);
-          --color-amber-600: oklch(66.6% 0.179 58.318);
-          --color-emerald-50: oklch(97.9% 0.021 166.113);
-          --color-emerald-100: oklch(95% 0.052 163.051);
-          --color-emerald-200: oklch(90.5% 0.093 164.15);
-          --color-emerald-300: oklch(84.5% 0.143 164.978);
-          --color-emerald-400: oklch(76.5% 0.177 163.223);
-          --color-emerald-600: oklch(59.6% 0.145 163.225);
-          --color-emerald-700: oklch(50.8% 0.118 165.612);
-          --color-emerald-800: oklch(43.2% 0.095 166.913);
-          --color-emerald-900: oklch(37.8% 0.077 168.94);
-          --color-emerald-950: oklch(26.2% 0.051 172.552);
-          --color-blue-50: oklch(97% 0.014 254.604);
-          --color-blue-200: oklch(88.2% 0.059 254.128);
-          --color-blue-300: oklch(80.9% 0.105 251.813);
-          --color-blue-400: oklch(70.7% 0.165 254.624);
-          --color-blue-500: oklch(62.3% 0.214 259.815);
-          --color-blue-600: oklch(54.6% 0.245 262.881);
-          --color-blue-700: oklch(48.8% 0.243 264.376);
-          --color-blue-800: oklch(42.4% 0.199 265.638);
-          --color-blue-950: oklch(28.2% 0.091 267.935);
-          --color-slate-50: oklch(98.4% 0.003 247.858);
-          --color-slate-100: oklch(96.8% 0.007 247.896);
-          --color-slate-200: oklch(92.9% 0.013 255.508);
-          --color-slate-300: oklch(86.9% 0.022 252.894);
-          --color-slate-400: oklch(70.4% 0.04 256.788);
-          --color-slate-500: oklch(55.4% 0.046 257.417);
-          --color-slate-600: oklch(44.6% 0.043 257.281);
-          --color-slate-700: oklch(37.2% 0.044 257.287);
-          --color-slate-800: oklch(27.9% 0.041 260.031);
-          --color-slate-900: oklch(20.8% 0.042 265.755);
-          --color-slate-950: oklch(12.9% 0.042 264.695);
+          --color-red-50: #f3f2ee;
+          --color-red-400: #d4d4d4;
+          --color-red-600: #1a1a1a;
+          --color-red-700: #0b0b0b;
+          --color-red-950: #141414;
+          --color-amber-500: #737373;
+          --color-amber-600: #404040;
+          --color-emerald-50: #f3f2ee;
+          --color-emerald-100: #eae8e3;
+          --color-emerald-200: #dcdad4;
+          --color-emerald-300: #bdbbb4;
+          --color-emerald-400: #d4d4d4;
+          --color-emerald-600: #171717;
+          --color-emerald-700: #0b0b0b;
+          --color-emerald-800: #262626;
+          --color-emerald-900: #171717;
+          --color-emerald-950: #141414;
+          --color-blue-50: #f3f2ee;
+          --color-blue-200: #dcdad4;
+          --color-blue-300: #bdbbb4;
+          --color-blue-400: #e5e5e5;
+          --color-blue-500: #262626;
+          --color-blue-600: #111111;
+          --color-blue-700: #000000;
+          --color-blue-800: #262626;
+          --color-blue-950: #1c1c1c;
+          --color-slate-50: #faf9f6;
+          --color-slate-100: #f3f2ee;
+          --color-slate-200: #e5e4df;
+          --color-slate-300: #d0cfc9;
+          --color-slate-400: #8f8e88;
+          --color-slate-500: #6b6a65;
+          --color-slate-600: #4a4a47;
+          --color-slate-700: #2b2b2b;
+          --color-slate-800: #1e1e1e;
+          --color-slate-900: #141414;
+          --color-slate-950: #0b0b0b;
           --color-black: #000;
           --color-white: #fff;
           --spacing: 0.25rem;
@@ -14496,12 +14970,12 @@ endobj
         }
       }
       .studio-checkerboard {
-        background-color: #16181d;
+        background-color: #f3f2ee;
         background-image:
-          linear-gradient(45deg, #21252d 25%, #0000 25%),
-          linear-gradient(-45deg, #21252d 25%, #0000 25%),
-          linear-gradient(45deg, #0000 75%, #21252d 75%),
-          linear-gradient(-45deg, #0000 75%, #21252d 75%);
+          linear-gradient(45deg, #e5e4df 25%, #0000 25%),
+          linear-gradient(-45deg, #e5e4df 25%, #0000 25%),
+          linear-gradient(45deg, #0000 75%, #e5e4df 75%),
+          linear-gradient(-45deg, #0000 75%, #e5e4df 75%);
         background-position:
           0 0,
           0 8px,
@@ -14509,11 +14983,64 @@ endobj
           -8px 0;
         background-size: 16px 16px;
       }
-      .tabular-nums {
-        font-variant-numeric: tabular-nums;
+      .dark .studio-checkerboard {
+        background-color: #101010;
+        background-image:
+          linear-gradient(45deg, #1e1e1e 25%, #0000 25%),
+          linear-gradient(-45deg, #1e1e1e 25%, #0000 25%),
+          linear-gradient(45deg, #0000 75%, #1e1e1e 75%),
+          linear-gradient(-45deg, #0000 75%, #1e1e1e 75%);
       }
       input[type="range"] {
-        accent-color: #2563eb;
+        accent-color: #111111;
+      }
+      .dark input[type="range"] {
+        accent-color: #faf9f6;
+      }
+      .cf-drawer-side {
+        height: 100%;
+        flex-shrink: 0;
+        overflow: hidden;
+        transition:
+          width 240ms cubic-bezier(0.16, 1, 0.3, 1),
+          opacity 200ms ease;
+      }
+      .cf-drawer-left-open {
+        width: 272px;
+        opacity: 1;
+      }
+      .cf-drawer-right-open {
+        width: 348px;
+        opacity: 1;
+      }
+      .cf-drawer-closed {
+        width: 0 !important;
+        opacity: 0;
+        pointer-events: none;
+        border-width: 0 !important;
+      }
+      .cf-drawer-inner > aside {
+        width: 100% !important;
+        height: 100% !important;
+        border: 0 !important;
+      }
+      .cf-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 48px;
+        height: 68vh;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px 16px 0 0;
+        transform: translateY(115%);
+        transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+      }
+      .cf-sheet-open {
+        transform: translateY(0);
+        pointer-events: auto;
       }
       ::-webkit-scrollbar {
         width: 6px;
