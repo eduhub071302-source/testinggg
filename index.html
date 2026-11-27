@@ -1876,7 +1876,7 @@
             el.removeEventListener(`wheel`, onWheelNative);
           };
         }, []);
-        n(() => {
+        (() => {
           Se(1);
           setPan({ x: 0, y: 0 });
         }, [t?.id]);
