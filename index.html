@@ -35,6 +35,7 @@
       import {
         useCallback as t,
         useEffect as n,
+        useEffect as cfUseEffect,
         useMemo as r,
         useRef as i,
         useState as a,
@@ -1853,7 +1854,7 @@
           renderedBoxH = Math.round(baseFitH * layoutZoom),
           effectivePixelRatio = (baseFitW * zoom) / mediaNatW,
           useCrispPixels = effectivePixelRatio >= 2.25;
-        (() => {
+        cfUseEffect(() => {
           let el = vpRef.current;
           if (!el) return;
           let update = () => {
@@ -1875,34 +1876,34 @@
             ro?.disconnect();
             el.removeEventListener(`wheel`, onWheelNative);
           };
-        }, []);
-        (() => {
+        }, [t?.id]);
+        cfUseEffect(() => {
           Se(1);
           setPan({ x: 0, y: 0 });
         }, [t?.id]);
-        ((handleViewportPointerDown = (ev) => {
-          if (ev.target.closest(`button,input,select,textarea`)) return;
-          ptrsRef.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
-          if (ptrsRef.current.size === 2) {
-            let [p1, p2] = Array.from(ptrsRef.current.values());
-            pinchRef.current = {
-              dist: Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1,
-              midX: (p1.x + p2.x) / 2,
-              midY: (p1.y + p2.y) / 2,
-              startZoom: xe,
-              startPan: pan,
-            };
-            dragRef.current = null;
-          } else if (ptrsRef.current.size === 1 && !Ee && !L && !De) {
-            ev.currentTarget.setPointerCapture?.(ev.pointerId);
-            dragRef.current = {
-              startX: ev.clientX,
-              startY: ev.clientY,
-              startPan: pan,
-            };
-          }
-        }),
-          (handleViewportPointerMove = (ev) => {
+        let handleViewportPointerDown = (ev) => {
+            if (ev.target.closest(`button,input,select,textarea`)) return;
+            ptrsRef.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+            if (ptrsRef.current.size === 2) {
+              let [p1, p2] = Array.from(ptrsRef.current.values());
+              pinchRef.current = {
+                dist: Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1,
+                midX: (p1.x + p2.x) / 2,
+                midY: (p1.y + p2.y) / 2,
+                startZoom: xe,
+                startPan: pan,
+              };
+              dragRef.current = null;
+            } else if (ptrsRef.current.size === 1 && !Ee && !L && !De) {
+              ev.currentTarget.setPointerCapture?.(ev.pointerId);
+              dragRef.current = {
+                startX: ev.clientX,
+                startY: ev.clientY,
+                startPan: pan,
+              };
+            }
+          },
+          handleViewportPointerMove = (ev) => {
             if (!ptrsRef.current.has(ev.pointerId)) return;
             ptrsRef.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
             if (ptrsRef.current.size === 2 && pinchRef.current) {
@@ -1930,18 +1931,18 @@
                 y: startPan.y + (ev.clientY - startY),
               });
             }
-          }),
-          (handleViewportPointerUp = (ev) => {
+          },
+          handleViewportPointerUp = (ev) => {
             ptrsRef.current.delete(ev.pointerId);
             if (ptrsRef.current.size < 2) pinchRef.current = null;
             if (ptrsRef.current.size === 0) dragRef.current = null;
-          }),
-          (Ee = n === `screenshot-annotate`),
-          (L = n === `region-redact`),
-          (De = n === `perspective-deskew`),
-          (Oe = n === `passport-id`),
-          (ke = n === `visual-diff`),
-          (Ae = (e) => {
+          },
+          Ee = n === `screenshot-annotate`,
+          L = n === `region-redact`,
+          De = n === `perspective-deskew`,
+          Oe = n === `passport-id`,
+          ke = n === `visual-diff`,
+          Ae = (e) => {
             let t = P.current?.getBoundingClientRect();
             return !t || t.width === 0 || t.height === 0
               ? { x: 0, y: 0 }
@@ -1949,8 +1950,8 @@
                   x: Math.max(0, Math.min(1, (e.clientX - t.left) / t.width)),
                   y: Math.max(0, Math.min(1, (e.clientY - t.top) / t.height)),
                 };
-          }),
-          (je = (e) => {
+          },
+          je = (e) => {
             if (!Ee && !L) return;
             e.currentTarget.setPointerCapture(e.pointerId);
             let { x: t, y: n } = Ae(e),
@@ -2004,8 +2005,8 @@
                     strength: 14,
                   },
                 ]));
-          }),
-          (Me = (e) => {
+          },
+          Me = (e) => {
             if (I.current && De) {
               let { x: t, y: n } = Ae(e);
               ve({ ...O, [I.current]: { x: t, y: n } });
@@ -2043,19 +2044,19 @@
                       : e,
                   ),
                 );
-          }),
-          (Ne = () => {
+          },
+          Ne = () => {
             ((F.current = null), (I.current = null));
-          }),
-          (Pe = async () => {
+          },
+          Pe = async () => {
             (await ne(), Ce(!0), setTimeout(() => Ce(!1), 1800));
-          }),
-          (R =
+          },
+          R =
             t && t.originalBytes > 0
               ? Math.round(
                   ((t.originalBytes - t.currentBytes) / t.originalBytes) * 100,
                 )
-              : 0));
+              : 0;
         return T(`section`, {
           className: `flex-1 min-w-0 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden`,
           children: [
