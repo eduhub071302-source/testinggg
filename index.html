@@ -1,0 +1,1757 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0A0A0A" />
+    <title>Ghanovex — Universal OPFS &amp; Picture-in-Picture Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --matte-950: #070707;
+        --matte-900: #0a0a0a;
+        --matte-850: #111111;
+        --matte-800: #171717;
+        --matte-700: #242424;
+        --pearl-50: #ffffff;
+        --pearl-100: #f5f5f3;
+        --pearl-200: #e2e2dc;
+        --pearl-400: #9c9c95;
+        --pearl-500: #6f6f69;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        min-height: 100%;
+        background: var(--matte-900);
+        color: var(--pearl-100);
+        font-family:
+          "Plus Jakarta Sans",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior: none;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: "Outfit", system-ui, sans-serif;
+        letter-spacing: -0.015em;
+      }
+      .mono {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+
+      /* Top Bar (3-zone contract) */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 14px 24px;
+        background: rgba(10, 10, 10, 0.92);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--matte-700);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Outfit", sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        white-space: nowrap;
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+      }
+      nav button {
+        background: none;
+        border: 0;
+        color: var(--pearl-400);
+        font-size: 13px;
+        font-weight: 500;
+        padding: 6px 0;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+      }
+      nav button.active,
+      nav button:hover {
+        color: var(--pearl-100);
+      }
+      nav button.active {
+        border-bottom-color: var(--pearl-100);
+      }
+      .btn-primary {
+        background: var(--pearl-100);
+        color: var(--matte-900);
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: background 150ms ease;
+      }
+      .btn-primary:hover {
+        background: var(--pearl-50);
+      }
+      .btn-outline {
+        background: transparent;
+        color: var(--pearl-200);
+        border: 1px solid var(--matte-700);
+        border-radius: 8px;
+        padding: 8px 13px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        transition:
+          background 150ms ease,
+          border-color 150ms ease;
+      }
+      .btn-outline:hover {
+        background: var(--matte-800);
+        border-color: #3a3a3a;
+      }
+      .btn-outline.active {
+        background: var(--pearl-100);
+        color: var(--matte-900);
+        border-color: var(--pearl-100);
+      }
+
+      /* Main Workspace Layout */
+      main {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .grid-layout {
+        display: grid;
+        grid-template-columns: 330px 1fr;
+        gap: 20px;
+        align-items: start;
+      }
+      @media (max-width: 960px) {
+        .grid-layout {
+          grid-template-columns: 1fr;
+        }
+        header {
+          padding: 12px 16px;
+          gap: 12px;
+        }
+        nav {
+          gap: 12px;
+          overflow-x: auto;
+        }
+      }
+      .panel {
+        background: var(--matte-850);
+        border: 1px solid var(--matte-700);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .panel-pad {
+        padding: 16px;
+      }
+      .divider {
+        border-top: 1px solid #1e1e1e;
+        margin: 14px 0;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .between {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .muted {
+        color: var(--pearl-400);
+        font-size: 12px;
+      }
+      select,
+      input[type="text"],
+      input[type="search"] {
+        background: var(--matte-900);
+        border: 1px solid var(--matte-700);
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-size: 12px;
+        color: var(--pearl-100);
+        outline: none;
+      }
+      select:focus,
+      input:focus {
+        border-color: var(--pearl-100);
+      }
+
+      /* Queue List */
+      .queue-list {
+        max-height: 360px;
+        overflow-y: auto;
+      }
+      .queue-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 14px;
+        background: transparent;
+        border: 0;
+        border-top: 1px solid #1a1a1a;
+        text-align: left;
+      }
+      .queue-item:hover {
+        background: #161616;
+      }
+      .queue-item.active {
+        background: #1e1e1e;
+        color: var(--pearl-50);
+      }
+      .queue-name {
+        font-size: 12px;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .queue-meta {
+        font-size: 11px;
+        color: var(--pearl-400);
+        margin-top: 2px;
+      }
+
+      /* Stage */
+      .stage-body {
+        height: 500px;
+        background: #080808;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .stage-body img,
+      .stage-body video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #080808;
+      }
+      .stage-body iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #0a0a0a;
+      }
+      .doc-box {
+        width: 100%;
+        height: 100%;
+        overflow-y: auto;
+        padding: 24px 28px;
+        white-space: pre-wrap;
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--pearl-200);
+        background: #0c0c0c;
+      }
+
+      /* Frameless Floating Picture-in-Picture (Zero Frame Chrome) */
+      #pip-window {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 9999;
+        display: none;
+        background: #0a0a0a;
+        overflow: hidden;
+        user-select: none;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.92);
+      }
+      #pip-window.active {
+        display: block;
+      }
+      #pip-window.resizing {
+        outline: 1px solid rgba(245, 245, 243, 0.55);
+      }
+      #pip-content {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+      #pip-content img,
+      #pip-content video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        pointer-events: none;
+        background: #0a0a0a;
+      }
+      #pip-content .pip-doc {
+        width: 100%;
+        height: 100%;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 20px;
+        white-space: pre-wrap;
+        font-size: 13px;
+        line-height: 1.65;
+        color: var(--pearl-200);
+        background: #0e0e0e;
+      }
+      #pip-content iframe {
+        border: 0;
+        background: #0a0a0a;
+      }
+      .pip-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 25;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .pip-mini-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: 0;
+        background: rgba(0, 0, 0, 0.38);
+        backdrop-filter: blur(6px);
+        color: #f5f5f3;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+      }
+      .pip-mini-btn.on {
+        background: rgba(245, 245, 243, 0.92);
+        color: #0a0a0a;
+      }
+      .pip-progress {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2px;
+        background: rgba(245, 245, 243, 0.14);
+        pointer-events: none;
+      }
+      .pip-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: #f5f5f3;
+      }
+      .pip-corner {
+        position: absolute;
+        width: 44px;
+        height: 44px;
+        z-index: 30;
+        touch-action: none;
+      }
+      .pip-corner.nw {
+        top: 0;
+        left: 0;
+        cursor: nwse-resize;
+      }
+      .pip-corner.ne {
+        top: 0;
+        right: 0;
+        cursor: nesw-resize;
+      }
+      .pip-corner.sw {
+        bottom: 0;
+        left: 0;
+        cursor: nesw-resize;
+      }
+      .pip-corner.se {
+        bottom: 0;
+        right: 0;
+        cursor: nwse-resize;
+      }
+
+      /* Minimized Floating Ghanovex Circle */
+      #pip-circle {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 10000;
+        display: none;
+        width: 56px;
+        height: 56px;
+        border-radius: 999px;
+        background: #0a0a0a;
+        border: 1px solid rgba(245, 245, 243, 0.36);
+        box-shadow: 0 14px 38px rgba(0, 0, 0, 0.85);
+        align-items: center;
+        justify-content: center;
+        touch-action: none;
+      }
+      #pip-circle.active {
+        display: flex;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 48 48"
+          fill="none"
+          aria-hidden="true"
+        >
+          <circle
+            cx="24"
+            cy="24"
+            r="22"
+            stroke="#F5F5F3"
+            stroke-opacity="0.3"
+            stroke-width="1.5"
+          />
+          <path
+            d="M32.5 16.5C30.4 13.8 27.4 12.2 24 12.2C17.5 12.2 12.2 17.5 12.2 24C12.2 30.5 17.5 35.8 24 35.8C30.2 35.8 35.2 31.1 35.7 25H24.5"
+            stroke="#F5F5F3"
+            stroke-width="2.8"
+            stroke-linecap="square"
+          />
+          <rect x="24" y="21.5" width="11.5" height="2.4" fill="#F5F5F3" />
+        </svg>
+        <span>Ghanovex</span>
+      </div>
+      <nav aria-label="Primary sections">
+        <button type="button" class="active" data-tab="library">Library</button>
+        <button type="button" data-tab="web">Web &amp; Games</button>
+        <button type="button" data-tab="opfs">OPFS Vault</button>
+      </nav>
+      <button type="button" class="btn-primary" id="header-pip-btn">
+        Launch PiP
+      </button>
+    </header>
+
+    <main>
+      <!-- LIBRARY TAB -->
+      <section id="tab-library" class="grid-layout">
+        <aside style="display: flex; flex-direction: column; gap: 16px">
+          <div class="panel panel-pad">
+            <div class="between" style="margin-bottom: 12px">
+              <h2 style="font-size: 14px">Device Bridge</h2>
+              <span class="muted" id="source-label">Studio Ready</span>
+            </div>
+            <div class="row" style="margin-bottom: 12px">
+              <button
+                type="button"
+                class="btn-primary"
+                style="flex: 1"
+                id="btn-pc-folder"
+              >
+                PC Folder
+              </button>
+              <button
+                type="button"
+                class="btn-outline"
+                style="flex: 1"
+                id="btn-dir-pick"
+              >
+                Directory Pick
+              </button>
+            </div>
+            <div class="divider"></div>
+            <label
+              for="mobile-cat"
+              class="muted"
+              style="display: block; margin-bottom: 6px"
+              >Mobile Gallery / Category Scope</label
+            >
+            <div class="row">
+              <select id="mobile-cat" style="flex: 1">
+                <option value="image/*,video/*">
+                  Whole Gallery (Photos &amp; Videos)
+                </option>
+                <option value="image/*">Photos &amp; Camera Roll</option>
+                <option value="video/*">Videos &amp; Clips</option>
+                <option
+                  value=".pdf,.doc,.docx,.txt,.md,.csv,.json,.xml,.rtf,.html"
+                >
+                  Documents &amp; PDFs
+                </option>
+                <option value="*/*">All Device Files</option>
+              </select>
+              <button type="button" class="btn-outline" id="btn-mobile-open">
+                Open
+              </button>
+            </div>
+            <input type="file" id="input-mobile" multiple class="hidden" />
+            <input
+              type="file"
+              id="input-dir"
+              multiple
+              webkitdirectory
+              directory
+              class="hidden"
+            />
+          </div>
+
+          <div class="panel">
+            <div class="panel-pad" style="padding-bottom: 10px">
+              <div class="between" style="margin-bottom: 10px">
+                <h2 style="font-size: 14px">Media Queue</h2>
+                <span class="mono muted" id="queue-count">0 items</span>
+              </div>
+              <input
+                type="search"
+                id="search-input"
+                placeholder="Filter files..."
+                style="width: 100%"
+              />
+            </div>
+            <div id="queue-list" class="queue-list"></div>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div
+            class="panel-pad between"
+            style="border-bottom: 1px solid #1e1e1e; flex-wrap: wrap"
+          >
+            <div style="min-width: 0">
+              <h2 id="stage-title" style="font-size: 16px">Select Media</h2>
+              <div id="stage-meta" class="mono muted" style="margin-top: 2px">
+                300 MB chunk ceiling active
+              </div>
+            </div>
+            <div class="row">
+              <button type="button" class="btn-outline" id="btn-prev">
+                Prev
+              </button>
+              <button type="button" class="btn-outline" id="btn-next">
+                Next
+              </button>
+              <button type="button" class="btn-outline" id="btn-stage-mute">
+                Muted
+              </button>
+              <button type="button" class="btn-outline" id="btn-stage-auto">
+                Auto-Switch
+              </button>
+              <button type="button" class="btn-outline" id="btn-save-opfs">
+                Save OPFS
+              </button>
+              <button type="button" class="btn-primary" id="btn-stage-pip">
+                Open Frameless PiP
+              </button>
+            </div>
+          </div>
+          <div id="stage-body" class="stage-body"></div>
+          <div
+            id="stage-footer"
+            class="panel-pad mono muted"
+            style="border-top: 1px solid #1e1e1e; background: #0d0d0d"
+          >
+            Single tap PiP: Hide &amp; mute · Double tap: Reopen full view ·
+            Long-press 4 corners: Resize · Swipe horizontal: Switch media
+          </div>
+        </section>
+      </section>
+
+      <!-- WEB & GAMES TAB -->
+      <section
+        id="tab-web"
+        class="hidden"
+        style="display: flex; flex-direction: column; gap: 18px"
+      >
+        <div class="panel panel-pad">
+          <h2 style="font-size: 18px; margin-bottom: 6px">
+            Open Any Website or Game in PiP
+          </h2>
+          <p class="muted" style="margin-bottom: 14px">
+            Portrait websites default to vertical portrait PiP. Landscape games
+            default to widescreen PiP with zoom, orientation flip, and
+            pause-on-hide.
+          </p>
+          <form id="web-form" class="row">
+            <input
+              type="text"
+              id="web-url-input"
+              placeholder="https://en.m.wikipedia.org  or  https://play.2048game.com"
+              style="flex: 1; min-width: 240px"
+            />
+            <select id="web-orient-select">
+              <option value="auto">Auto Orientation</option>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+            <button type="submit" class="btn-primary">Float in PiP</button>
+          </form>
+        </div>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+          "
+        >
+          <div class="panel panel-pad">
+            <div class="muted" style="margin-bottom: 6px">
+              Interactive Game · Default Landscape
+            </div>
+            <h3 style="font-size: 16px; margin-bottom: 8px">Monolith Rally</h3>
+            <p class="muted" style="margin-bottom: 14px">
+              Offline monochrome arcade rally that opens in landscape PiP and
+              pauses cleanly when hidden.
+            </p>
+            <button type="button" class="btn-primary" id="launch-game-preset">
+              Launch Landscape Game PiP
+            </button>
+          </div>
+          <div class="panel panel-pad">
+            <div class="muted" style="margin-bottom: 6px">
+              Portrait Website · Default Portrait
+            </div>
+            <h3 style="font-size: 16px; margin-bottom: 8px">
+              Monochrome Dispatch
+            </h3>
+            <p class="muted" style="margin-bottom: 14px">
+              Portrait mobile reader that opens in vertical portrait PiP with
+              instant orientation toggle.
+            </p>
+            <button type="button" class="btn-primary" id="launch-web-preset">
+              Launch Portrait Web PiP
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- OPFS VAULT TAB -->
+      <section
+        id="tab-opfs"
+        class="hidden"
+        style="display: flex; flex-direction: column; gap: 16px"
+      >
+        <div class="panel panel-pad between" style="flex-wrap: wrap">
+          <div>
+            <h2 style="font-size: 18px">
+              Origin Private File System (OPFS) Vault
+            </h2>
+            <p class="muted" id="opfs-status" style="margin-top: 4px">
+              Checking browser OPFS support...
+            </p>
+          </div>
+          <div class="row">
+            <button type="button" class="btn-primary" id="btn-opfs-import">
+              Import Files to OPFS
+            </button>
+            <button type="button" class="btn-outline" id="btn-opfs-clear">
+              Clear Vault
+            </button>
+            <input type="file" id="input-opfs" multiple class="hidden" />
+          </div>
+        </div>
+        <div class="panel" id="opfs-list"></div>
+      </section>
+    </main>
+
+    <!-- FRAMELESS FLOATING PIP WINDOW -->
+    <div
+      id="pip-window"
+      role="region"
+      aria-label="Frameless Picture-in-Picture"
+    >
+      <div id="pip-content"></div>
+      <div class="pip-controls" id="pip-controls"></div>
+      <div class="pip-progress">
+        <div class="pip-progress-fill" id="pip-progress-fill"></div>
+      </div>
+      <div class="pip-corner nw" data-corner="nw"></div>
+      <div class="pip-corner ne" data-corner="ne"></div>
+      <div class="pip-corner sw" data-corner="sw"></div>
+      <div class="pip-corner se" data-corner="se"></div>
+    </div>
+
+    <!-- MINIMIZED FLOATING GHANOVEX CIRCLE -->
+    <button
+      type="button"
+      id="pip-circle"
+      aria-label="Restore Ghanovex Picture-in-Picture"
+      title="Tap to unmute and restore"
+    >
+      <svg
+        width="30"
+        height="30"
+        viewBox="0 0 48 48"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle
+          cx="24"
+          cy="24"
+          r="22"
+          stroke="#F5F5F3"
+          stroke-opacity="0.28"
+          stroke-width="1.5"
+        />
+        <path
+          d="M32.5 16.5C30.4 13.8 27.4 12.2 24 12.2C17.5 12.2 12.2 17.5 12.2 24C12.2 30.5 17.5 35.8 24 35.8C30.2 35.8 35.2 31.1 35.7 25H24.5"
+          stroke="#F5F5F3"
+          stroke-width="2.6"
+          stroke-linecap="square"
+        />
+        <rect x="24" y="21.5" width="11.5" height="2.4" fill="#F5F5F3" />
+        <circle cx="24" cy="24" r="2.2" fill="#FFFFFF" />
+      </svg>
+    </button>
+
+    <script>
+      (() => {
+        const MAX_CAP = 300 * 1024 * 1024; // 300 MB hard stream chunk cap
+        const CHUNK_SIZE = 4 * 1024 * 1024;
+        const IMAGE_MS = 3000;
+        const LONG_PRESS_MS = 320;
+        const DOUBLE_TAP_MS = 260;
+
+        // LRU 300MB-capped File.slice chunk manager
+        class ChunkStreamManager {
+          constructor(file) {
+            this.file = file;
+            this.cache = new Map();
+            this.cachedBytes = 0;
+            this.evictions = 0;
+            this.tick = 0;
+            this.activeChunk = 0;
+          }
+          get totalChunks() {
+            return Math.max(1, Math.ceil((this.file?.size || 0) / CHUNK_SIZE));
+          }
+          async prefetch(idx) {
+            if (!this.file) return;
+            for (
+              let i = idx;
+              i <= Math.min(this.totalChunks - 1, idx + 1);
+              i++
+            ) {
+              if (this.cache.has(i)) {
+                this.cache.get(i).t = ++this.tick;
+                continue;
+              }
+              const buf = await this.file
+                .slice(
+                  i * CHUNK_SIZE,
+                  Math.min(this.file.size, (i + 1) * CHUNK_SIZE),
+                )
+                .arrayBuffer();
+              while (
+                this.cachedBytes + buf.byteLength > MAX_CAP &&
+                this.cache.size > 0
+              ) {
+                let oldestK = null,
+                  oldestT = Infinity;
+                for (const [k, v] of this.cache) {
+                  if (v.t < oldestT) {
+                    oldestT = v.t;
+                    oldestK = k;
+                  }
+                }
+                if (oldestK === null) break;
+                this.cachedBytes -= this.cache.get(oldestK).buf.byteLength;
+                this.cache.delete(oldestK);
+                this.evictions++;
+              }
+              this.cache.set(i, { buf, t: ++this.tick });
+              this.cachedBytes += buf.byteLength;
+            }
+            this.activeChunk = idx;
+          }
+          clear() {
+            this.cache.clear();
+            this.cachedBytes = 0;
+          }
+        }
+
+        const fmtBytes = (b) => {
+          if (!b || b <= 0) return "0 B";
+          const u = ["B", "KB", "MB", "GB", "TB"];
+          const e = Math.min(
+            Math.floor(Math.log(b) / Math.log(1024)),
+            u.length - 1,
+          );
+          return (b / Math.pow(1024, e)).toFixed(e === 0 ? 0 : 1) + " " + u[e];
+        };
+
+        const detectKind = (name, mime = "") => {
+          const ext = (name.split(".").pop() || "").toLowerCase();
+          if (ext === "pdf" || mime === "application/pdf") return "pdf";
+          if (
+            [
+              "png",
+              "jpg",
+              "jpeg",
+              "webp",
+              "gif",
+              "avif",
+              "svg",
+              "bmp",
+              "ico",
+              "heic",
+              "tiff",
+              "tif",
+            ].includes(ext) ||
+            mime.startsWith("image/")
+          )
+            return "image";
+          if (
+            [
+              "mp4",
+              "webm",
+              "mov",
+              "mkv",
+              "ogv",
+              "m4v",
+              "avi",
+              "ts",
+              "3gp",
+            ].includes(ext) ||
+            mime.startsWith("video/")
+          )
+            return "video";
+          if (
+            ["mp3", "wav", "flac", "ogg", "m4a", "aac", "opus"].includes(ext) ||
+            mime.startsWith("audio/")
+          )
+            return "audio";
+          return "document";
+        };
+
+        const makePlate = (title, sub) => {
+          const c = document.createElement("canvas");
+          c.width = 1280;
+          c.height = 720;
+          const g = c.getContext("2d");
+          g.fillStyle = "#0A0A0A";
+          g.fillRect(0, 0, 1280, 720);
+          for (let i = 0; i < 16; i++) {
+            g.fillStyle =
+              "rgba(245,245,243," + (0.08 + (i % 4) * 0.14).toFixed(2) + ")";
+            g.fillRect(96 + i * 68, 70 + (i % 3) * 28, 34, 520 - (i % 3) * 40);
+          }
+          g.fillStyle = "#0A0A0A";
+          g.fillRect(96, 510, 540, 130);
+          g.strokeStyle = "rgba(245,245,243,0.3)";
+          g.strokeRect(96, 510, 540, 130);
+          g.fillStyle = "#F5F5F3";
+          g.font = "600 32px Outfit, sans-serif";
+          g.fillText(title, 124, 566);
+          g.fillStyle = "#9C9C95";
+          g.font = "400 17px sans-serif";
+          g.fillText(sub, 124, 606);
+          return c.toDataURL("image/png");
+        };
+
+        const GAME_HTML =
+          '<!doctype html><html><body style="margin:0;overflow:hidden;background:#0A0A0A;color:#F5F5F3;font-family:sans-serif"><canvas id="c" style="width:100vw;height:100vh;display:block"></canvas><script>const c=document.getElementById("c"),x=c.getContext("2d");let W=640,H=360,p=0,y1=.5,y2=.5,bx=.5,by=.5,vx=.008,vy=.005;function r(){W=innerWidth;H=innerHeight;c.width=W;c.height=H}onresize=r;r();onpointermove=e=>y1=Math.max(.14,Math.min(.86,e.clientY/H));onmessage=e=>{if(e.data?.type==="GHANOVEX_PAUSE")p=1;if(e.data?.type==="GHANOVEX_RESUME")p=0};(function l(){if(!p){bx+=vx;by+=vy;if(by<.04||by>.96)vy*=-1;y2+=(by-y2)*.08;if(bx<.06&&Math.abs(by-y1)<.14)vx=Math.abs(vx);if(bx>.94&&Math.abs(by-y2)<.14)vx=-Math.abs(vx);if(bx<0||bx>1){bx=.5;by=.5;vx*=-1}}x.fillStyle="#0A0A0A";x.fillRect(0,0,W,H);x.fillStyle="#F5F5F3";x.fillRect(W*.04,y1*H-H*.11,6,H*.22);x.fillRect(W*.96-6,y2*H-H*.11,6,H*.22);x.beginPath();x.arc(bx*W,by*H,6,0,6.29);x.fill();requestAnimationFrame(l)})()<\/script></body></html>';
+        const WEB_HTML =
+          '<!doctype html><html><body style="margin:0;padding:20px;background:#0C0C0C;color:#F5F5F3;font-family:system-ui,sans-serif;line-height:1.6"><div style="font-size:11px;color:#9C9C95;letter-spacing:.08em">PORTRAIT WEB</div><h1 style="font-size:20px;margin:8px 0 12px">Monochrome Dispatch</h1><p style="color:#C8C8C2;font-size:13px">Portrait websites open automatically in vertical portrait Picture-in-Picture dimensions for effortless reading.</p><hr style="border:0;border-top:1px solid #222;margin:16px 0"/><p style="color:#9C9C95;font-size:13px">Use the translucent corner icons to flip between portrait and landscape, zoom, interact, or collapse into the floating Ghanovex circle.</p></body></html>';
+
+        const state = {
+          items: [
+            {
+              id: "s1",
+              name: "Monolith_Pavilion.png",
+              kind: "image",
+              ext: "png",
+              size: 1840000,
+              url: makePlate(
+                "Monolith Pavilion",
+                "Matte Black & Pearl White Studio Plate 01",
+              ),
+            },
+            {
+              id: "s2",
+              name: "Ghanovex_Guide.md",
+              kind: "document",
+              ext: "md",
+              size: 1920,
+              text: "GHANOVEX STANDALONE EDITION\n===========================\n\n01. Direct OPFS & Device Access\nConnect PC folders via File System Access API or mobile galleries by category.\n\n02. 300 MB Stream Chunk Cap\nLarge videos stream via on-demand 4 MB File.slice chunks with automatic LRU eviction under 300 MB.\n\n03. Frameless Gesture PiP\n• PC Media: 1/2 screen width x 1/2 screen height Landscape.\n• Mobile Media: 1/2 screen width x 1/2 screen height Portrait.\n• Long-press any 4 corners to drag & resize.\n• Single tap hides & mutes into the floating Ghanovex circle.\n• Double tap reopens full view inside app.\n• Horizontal swipe switches files; vertical scroll scrolls documents.\n• Auto-Switch pauses 3s on images, waits for video end, and smoothly scrolls docs before switching.\n\n04. Websites & Games\nPortrait sites open in portrait; landscape games open in landscape with full pause-on-hide support.",
+            },
+            {
+              id: "s3",
+              name: "Pearl_Geometry.png",
+              kind: "image",
+              ext: "png",
+              size: 1520000,
+              url: makePlate(
+                "Pearl Geometry",
+                "Matte Black & Pearl White Studio Plate 02",
+              ),
+            },
+          ],
+          index: 0,
+          filter: "",
+          muted: true,
+          mutedBeforeHide: true,
+          autoSwitch: false,
+          pipActive: false,
+          pipHidden: false,
+          webInteract: true,
+          webZoom: 1,
+          rect: { x: 40, y: 40, width: 640, height: 400 },
+          iconPos: { x: 24, y: 120 },
+          savedVideoTime: 0,
+          savedDocTop: 0,
+          chunkManager: null,
+          autoRaf: 0,
+        };
+
+        const $ = (id) => document.getElementById(id);
+
+        function defaultRectFor(item, forcedOrient) {
+          const vw = innerWidth,
+            vh = innerHeight,
+            mobile = vw < 768 || vh > vw;
+          let w, h;
+          if (item.kind === "web" || item.kind === "game") {
+            const ori =
+              forcedOrient ||
+              item.orient ||
+              (item.kind === "game" ? "landscape" : "portrait");
+            if (ori === "portrait") {
+              h = Math.round(Math.min(vh * 0.66, 620));
+              w = Math.round((h * 9) / 16);
+            } else {
+              w = Math.round(Math.min(vw * 0.56, 800));
+              h = Math.round((w * 9) / 16);
+            }
+          } else {
+            w = Math.round(vw * 0.5);
+            h = Math.round(vh * 0.5);
+            if (mobile && w > h) w = Math.round(h * 0.65);
+            if (!mobile && h > w) h = Math.round(w * 0.625);
+          }
+          w = Math.max(168, Math.min(w, vw - 24));
+          h = Math.max(140, Math.min(h, vh - 24));
+          return {
+            x: Math.max(12, vw - w - 20),
+            y: Math.max(12, vh - h - 20),
+            width: w,
+            height: h,
+          };
+        }
+
+        function applyPipRect() {
+          const el = $("pip-window");
+          el.style.transform =
+            "translate3d(" + state.rect.x + "px," + state.rect.y + "px,0)";
+          el.style.width = state.rect.width + "px";
+          el.style.height = state.rect.height + "px";
+        }
+
+        function applyCirclePos() {
+          const c = $("pip-circle");
+          c.style.transform =
+            "translate3d(" +
+            state.iconPos.x +
+            "px," +
+            state.iconPos.y +
+            "px,0)";
+        }
+
+        function renderQueue() {
+          const list = $("queue-list");
+          list.innerHTML = "";
+          const q = state.filter.toLowerCase();
+          let shown = 0;
+          state.items.forEach((it, idx) => {
+            if (q && !it.name.toLowerCase().includes(q)) return;
+            shown++;
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className =
+              "queue-item" + (idx === state.index ? " active" : "");
+            const left = document.createElement("div");
+            left.style.minWidth = "0";
+            const nm = document.createElement("div");
+            nm.className = "queue-name";
+            nm.textContent = it.name;
+            const mt = document.createElement("div");
+            mt.className = "queue-meta mono";
+            mt.textContent =
+              "." + it.ext + " · " + (it.size ? fmtBytes(it.size) : "Live");
+            left.append(nm, mt);
+            btn.append(left);
+            btn.onclick = () => {
+              state.index = idx;
+              state.savedVideoTime = 0;
+              renderAll();
+            };
+            list.append(btn);
+          });
+          $("queue-count").textContent = shown + " / " + state.items.length;
+        }
+
+        function buildContentNode(item, frameless) {
+          if (item.kind === "image") {
+            const img = document.createElement("img");
+            img.src = item.url;
+            img.alt = item.name;
+            return img;
+          }
+          if (item.kind === "video") {
+            const v = document.createElement("video");
+            v.src = item.url;
+            v.muted = state.muted;
+            v.playsInline = true;
+            v.controls = !frameless;
+            if (state.savedVideoTime > 0) v.currentTime = state.savedVideoTime;
+            if (item.file) {
+              state.chunkManager?.clear();
+              state.chunkManager = new ChunkStreamManager(item.file);
+              state.chunkManager.prefetch(0);
+            }
+            v.ontimeupdate = () => {
+              state.savedVideoTime = v.currentTime;
+              if (state.chunkManager && v.duration > 0) {
+                const idx = Math.floor(
+                  (v.currentTime / v.duration) * state.chunkManager.totalChunks,
+                );
+                if (idx !== state.chunkManager.activeChunk) {
+                  state.chunkManager.prefetch(idx).then(() => {
+                    $("stage-footer").textContent =
+                      "Stream Chunk Buffer · " +
+                      fmtBytes(state.chunkManager.cachedBytes) +
+                      " / 300 MB cap · Chunk " +
+                      (idx + 1) +
+                      "/" +
+                      state.chunkManager.totalChunks;
+                  });
+                }
+              }
+            };
+            v.onended = () => {
+              if (state.autoSwitch && !state.pipHidden) stepItem(1);
+            };
+            setTimeout(() => {
+              if (!state.pipHidden) v.play().catch(() => {});
+            }, 20);
+            return v;
+          }
+          if (item.kind === "pdf") {
+            const f = document.createElement("iframe");
+            f.src = item.url + (frameless ? "#toolbar=0&navpanes=0" : "");
+            f.title = item.name;
+            return f;
+          }
+          if (item.kind === "web" || item.kind === "game") {
+            const f = document.createElement("iframe");
+            f.sandbox =
+              "allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups";
+            if (item.srcDoc) f.srcdoc = item.srcDoc;
+            else f.src = item.webUrl;
+            f.style.width = 100 / state.webZoom + "%";
+            f.style.height = 100 / state.webZoom + "%";
+            f.style.transform = "scale(" + state.webZoom + ")";
+            f.style.transformOrigin = "top left";
+            if (frameless && !state.webInteract) f.style.pointerEvents = "none";
+            return f;
+          }
+          const d = document.createElement("div");
+          d.className = frameless ? "pip-doc" : "doc-box";
+          d.textContent = item.text || "Previewing " + item.name;
+          if (frameless && state.savedDocTop)
+            setTimeout(() => {
+              d.scrollTop = state.savedDocTop;
+            }, 10);
+          return d;
+        }
+
+        function stopAutoLoop() {
+          if (state.autoRaf) cancelAnimationFrame(state.autoRaf);
+          state.autoRaf = 0;
+          $("pip-progress-fill").style.width = "0%";
+        }
+
+        function startAutoLoop() {
+          stopAutoLoop();
+          if (!state.pipActive || state.pipHidden || !state.autoSwitch) return;
+          const item = state.items[state.index];
+          if (
+            !item ||
+            item.kind === "video" ||
+            item.kind === "web" ||
+            item.kind === "game"
+          )
+            return;
+          if (item.kind === "image") {
+            const t0 = performance.now();
+            const tick = (now) => {
+              const p = Math.min(1, (now - t0) / IMAGE_MS);
+              $("pip-progress-fill").style.width = p * 100 + "%";
+              if (p >= 1) {
+                stepItem(1);
+                return;
+              }
+              state.autoRaf = requestAnimationFrame(tick);
+            };
+            state.autoRaf = requestAnimationFrame(tick);
+          } else if (item.kind === "document") {
+            let last = performance.now(),
+              hold = 0;
+            const tick = (now) => {
+              const dt = Math.min(0.08, (now - last) / 1000);
+              last = now;
+              const sc = $("pip-content").querySelector(".pip-doc");
+              if (sc) {
+                const max = sc.scrollHeight - sc.clientHeight;
+                if (max <= 4) {
+                  hold += dt * 1000;
+                  if (hold >= IMAGE_MS) {
+                    stepItem(1);
+                    return;
+                  }
+                } else if (sc.scrollTop < max - 2) {
+                  sc.scrollTop += dt * 42;
+                  $("pip-progress-fill").style.width =
+                    (sc.scrollTop / max) * 100 + "%";
+                } else {
+                  hold += dt * 1000;
+                  if (hold >= 900) {
+                    sc.scrollTop = 0;
+                    stepItem(1);
+                    return;
+                  }
+                }
+              }
+              state.autoRaf = requestAnimationFrame(tick);
+            };
+            state.autoRaf = requestAnimationFrame(tick);
+          }
+        }
+
+        function renderPip() {
+          const win = $("pip-window"),
+            circle = $("pip-circle");
+          if (!state.pipActive) {
+            win.classList.remove("active");
+            circle.classList.remove("active");
+            stopAutoLoop();
+            return;
+          }
+          if (state.pipHidden) {
+            win.classList.remove("active");
+            circle.classList.add("active");
+            applyCirclePos();
+            stopAutoLoop();
+            const v = $("pip-content").querySelector("video");
+            if (v) {
+              v.muted = true;
+              v.pause();
+            }
+            const f = $("pip-content").querySelector("iframe");
+            try {
+              f?.contentWindow?.postMessage({ type: "GHANOVEX_PAUSE" }, "*");
+            } catch {}
+            return;
+          }
+          circle.classList.remove("active");
+          win.classList.add("active");
+          applyPipRect();
+          const item = state.items[state.index];
+          const box = $("pip-content");
+          box.innerHTML = "";
+          box.append(buildContentNode(item, true));
+
+          const ctrls = $("pip-controls");
+          ctrls.innerHTML = "";
+          const addBtn = (label, txt, on, fn) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "pip-mini-btn" + (on ? " on" : "");
+            b.setAttribute("aria-label", label);
+            b.title = label;
+            b.textContent = txt;
+            b.onclick = (e) => {
+              e.stopPropagation();
+              fn();
+            };
+            ctrls.append(b);
+          };
+          if (
+            item.kind === "video" ||
+            item.kind === "audio" ||
+            item.kind === "web" ||
+            item.kind === "game"
+          ) {
+            addBtn(
+              state.muted ? "Unmute" : "Mute",
+              state.muted ? "✕" : "♪",
+              !state.muted,
+              () => {
+                state.muted = !state.muted;
+                state.mutedBeforeHide = state.muted;
+                const v = box.querySelector("video");
+                if (v) v.muted = state.muted;
+                renderPip();
+              },
+            );
+          }
+          if (item.kind !== "web" && item.kind !== "game") {
+            addBtn("Auto-Switch", "↻", state.autoSwitch, () => {
+              state.autoSwitch = !state.autoSwitch;
+              renderPip();
+            });
+          } else {
+            addBtn(
+              "Interact vs Gesture Mode",
+              state.webInteract ? "◎" : "✋",
+              state.webInteract,
+              () => {
+                state.webInteract = !state.webInteract;
+                renderPip();
+              },
+            );
+            addBtn("Flip Orientation", "⟲", false, () => {
+              const r = state.rect;
+              state.rect = {
+                x: Math.max(12, Math.min(innerWidth - r.height - 12, r.x)),
+                y: Math.max(12, Math.min(innerHeight - r.width - 12, r.y)),
+                width: Math.min(innerWidth - 24, r.height),
+                height: Math.min(innerHeight - 24, r.width),
+              };
+              applyPipRect();
+            });
+            addBtn("Hide to Ghanovex Circle", "—", false, hidePip);
+            addBtn("Reopen Full App", "⤢", false, reopenFull);
+          }
+          startAutoLoop();
+        }
+
+        function renderStage() {
+          const item = state.items[state.index];
+          $("stage-title").textContent = item ? item.name : "No Media";
+          $("stage-meta").textContent = item
+            ? item.kind.toUpperCase() +
+              " · ." +
+              item.ext +
+              " · " +
+              (item.size ? fmtBytes(item.size) : "Live") +
+              " · " +
+              (state.index + 1) +
+              "/" +
+              state.items.length
+            : "";
+          $("btn-stage-mute").textContent = state.muted ? "Muted" : "Sound On";
+          $("btn-stage-auto").classList.toggle("active", state.autoSwitch);
+          const body = $("stage-body");
+          body.innerHTML = "";
+          if (!item) return;
+          if (state.pipActive) {
+            const msg = document.createElement("div");
+            msg.style.textAlign = "center";
+            msg.style.padding = "32px";
+            msg.innerHTML =
+              '<div style="font-size:15px;font-weight:600;margin-bottom:8px;">Floating in Frameless Picture-in-Picture</div><div class="muted">Single tap to hide &amp; mute · Double tap to reopen here · Long-press 4 corners to resize</div>';
+            body.append(msg);
+          } else {
+            body.append(buildContentNode(item, false));
+          }
+        }
+
+        function renderAll() {
+          renderQueue();
+          renderStage();
+          renderPip();
+        }
+
+        function stepItem(delta) {
+          if (state.items.length <= 1) return;
+          state.index =
+            (state.index + delta + state.items.length) % state.items.length;
+          state.savedVideoTime = 0;
+          state.savedDocTop = 0;
+          renderAll();
+        }
+
+        function openPip(forcedOrient) {
+          const item = state.items[state.index];
+          if (!item) return;
+          state.rect = defaultRectFor(item, forcedOrient);
+          state.pipActive = true;
+          state.pipHidden = false;
+          renderAll();
+        }
+
+        function hidePip() {
+          const sc = $("pip-content").querySelector(".pip-doc");
+          if (sc) state.savedDocTop = sc.scrollTop;
+          state.mutedBeforeHide = state.muted;
+          state.muted = true;
+          state.pipHidden = true;
+          renderPip();
+        }
+
+        function restorePip() {
+          state.pipHidden = false;
+          state.muted = state.mutedBeforeHide;
+          renderPip();
+        }
+
+        function reopenFull() {
+          state.pipActive = false;
+          state.pipHidden = false;
+          renderAll();
+        }
+
+        // 4-Corner Long-Press Drag Resize
+        document.querySelectorAll(".pip-corner").forEach((cornerEl) => {
+          const corner = cornerEl.dataset.corner;
+          let timer = 0,
+            armed = false,
+            sx = 0,
+            sy = 0,
+            sr = null;
+          cornerEl.onpointerdown = (e) => {
+            e.stopPropagation();
+            cornerEl.setPointerCapture(e.pointerId);
+            sx = e.clientX;
+            sy = e.clientY;
+            sr = { ...state.rect };
+            armed = false;
+            timer = setTimeout(() => {
+              armed = true;
+              $("pip-window").classList.add("resizing");
+            }, LONG_PRESS_MS);
+          };
+          cornerEl.onpointermove = (e) => {
+            if (!sr) return;
+            const dx = e.clientX - sx,
+              dy = e.clientY - sy;
+            if (!armed && Math.hypot(dx, dy) > 14) {
+              clearTimeout(timer);
+              sr = null;
+              return;
+            }
+            if (!armed) return;
+            let l = sr.x,
+              t = sr.y,
+              r = sr.x + sr.width,
+              b = sr.y + sr.height;
+            if (corner === "nw" || corner === "sw")
+              l = Math.min(r - 168, Math.max(12, sr.x + dx));
+            else
+              r = Math.max(
+                l + 168,
+                Math.min(innerWidth - 12, sr.x + sr.width + dx),
+              );
+            if (corner === "nw" || corner === "ne")
+              t = Math.min(b - 140, Math.max(12, sr.y + dy));
+            else
+              b = Math.max(
+                t + 140,
+                Math.min(innerHeight - 12, sr.y + sr.height + dy),
+              );
+            state.rect = {
+              x: Math.round(l),
+              y: Math.round(t),
+              width: Math.round(r - l),
+              height: Math.round(b - t),
+            };
+            applyPipRect();
+          };
+          cornerEl.onpointerup = cornerEl.onpointercancel = () => {
+            clearTimeout(timer);
+            sr = null;
+            armed = false;
+            $("pip-window").classList.remove("resizing");
+          };
+        });
+
+        // Body Single-Tap Hide / Double-Tap Reopen / Horizontal Swipe / Long-Press Move
+        let tapTimer = 0,
+          lastTap = 0,
+          bg = null,
+          holdMove = 0;
+        $("pip-window").onpointerdown = (e) => {
+          if (e.target.closest("button") || e.target.closest(".pip-corner"))
+            return;
+          const it = state.items[state.index];
+          if ((it.kind === "web" || it.kind === "game") && state.webInteract)
+            return;
+          bg = {
+            x: e.clientX,
+            y: e.clientY,
+            sr: { ...state.rect },
+            moving: false,
+            dist: 0,
+          };
+          holdMove = setTimeout(() => {
+            if (bg && bg.dist < 10) bg.moving = true;
+          }, LONG_PRESS_MS + 60);
+        };
+        $("pip-window").onpointermove = (e) => {
+          if (!bg) return;
+          const dx = e.clientX - bg.x,
+            dy = e.clientY - bg.y;
+          bg.dist = Math.max(bg.dist, Math.hypot(dx, dy));
+          if (bg.dist > 10 && !bg.moving) clearTimeout(holdMove);
+          if (bg.moving) {
+            state.rect.x = Math.max(
+              12,
+              Math.min(
+                innerWidth - state.rect.width - 12,
+                Math.round(bg.sr.x + dx),
+              ),
+            );
+            state.rect.y = Math.max(
+              12,
+              Math.min(
+                innerHeight - state.rect.height - 12,
+                Math.round(bg.sr.y + dy),
+              ),
+            );
+            applyPipRect();
+          }
+        };
+        $("pip-window").onpointerup = (e) => {
+          clearTimeout(holdMove);
+          if (!bg) return;
+          const g = bg;
+          bg = null;
+          if (g.moving) return;
+          const dx = e.clientX - g.x,
+            dy = e.clientY - g.y;
+          if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.35) {
+            stepItem(dx < 0 ? 1 : -1);
+            return;
+          }
+          if (g.dist >= 12) return;
+          const now = performance.now();
+          if (now - lastTap <= DOUBLE_TAP_MS) {
+            clearTimeout(tapTimer);
+            lastTap = 0;
+            reopenFull();
+          } else {
+            lastTap = now;
+            tapTimer = setTimeout(() => {
+              lastTap = 0;
+              hidePip();
+            }, DOUBLE_TAP_MS + 15);
+          }
+        };
+
+        // Floating Ghanovex Circle Drag + Tap Restore
+        let cg = null;
+        $("pip-circle").onpointerdown = (e) => {
+          $("pip-circle").setPointerCapture(e.pointerId);
+          cg = {
+            x: e.clientX,
+            y: e.clientY,
+            sp: { ...state.iconPos },
+            moved: false,
+          };
+        };
+        $("pip-circle").onpointermove = (e) => {
+          if (!cg) return;
+          const dx = e.clientX - cg.x,
+            dy = e.clientY - cg.y;
+          if (Math.hypot(dx, dy) > 8) cg.moved = true;
+          if (cg.moved) {
+            state.iconPos = {
+              x: Math.max(
+                12,
+                Math.min(innerWidth - 68, Math.round(cg.sp.x + dx)),
+              ),
+              y: Math.max(
+                12,
+                Math.min(innerHeight - 68, Math.round(cg.sp.y + dy)),
+              ),
+            };
+            applyCirclePos();
+          }
+        };
+        $("pip-circle").onpointerup = () => {
+          if (cg && !cg.moved) restorePip();
+          cg = null;
+        };
+
+        // File ingestion
+        async function ingestFiles(fileList, label) {
+          const next = [];
+          for (const f of Array.from(fileList)) {
+            const kind = detectKind(f.name, f.type);
+            const item = {
+              id: "f-" + Math.random().toString(36).slice(2),
+              name: f.name,
+              kind,
+              ext: (f.name.split(".").pop() || "bin").toLowerCase(),
+              size: f.size,
+              file: f,
+            };
+            if (kind === "document")
+              item.text = await f
+                .slice(0, Math.min(f.size, 2 * 1024 * 1024))
+                .text();
+            else item.url = URL.createObjectURL(f);
+            next.push(item);
+          }
+          if (next.length) {
+            state.items = next;
+            state.index = 0;
+            $("source-label").textContent = label;
+            renderAll();
+          }
+        }
+
+        $("btn-pc-folder").onclick = async () => {
+          if (window.showDirectoryPicker) {
+            try {
+              const dir = await window.showDirectoryPicker({ mode: "read" });
+              const files = [];
+              async function walk(h, d) {
+                if (d > 5 || files.length > 2000) return;
+                for await (const e of h.values()) {
+                  if (e.kind === "file") files.push(await e.getFile());
+                  else if (e.kind === "directory") await walk(e, d + 1);
+                }
+              }
+              await walk(dir, 0);
+              await ingestFiles(files, dir.name);
+              return;
+            } catch {}
+          }
+          $("input-dir").click();
+        };
+        $("btn-dir-pick").onclick = () => $("input-dir").click();
+        $("input-dir").onchange = (e) => {
+          if (e.target.files?.length) ingestFiles(e.target.files, "PC Folder");
+          e.target.value = "";
+        };
+        $("btn-mobile-open").onclick = () => {
+          $("input-mobile").accept = $("mobile-cat").value;
+          $("input-mobile").click();
+        };
+        $("input-mobile").onchange = (e) => {
+          if (e.target.files?.length)
+            ingestFiles(e.target.files, "Mobile Gallery");
+          e.target.value = "";
+        };
+        $("search-input").oninput = (e) => {
+          state.filter = e.target.value;
+          renderQueue();
+        };
+
+        // OPFS Vault
+        async function refreshOpfs() {
+          if (!navigator.storage?.getDirectory) {
+            $("opfs-status").textContent = "OPFS unavailable in this context.";
+            return;
+          }
+          const root = await navigator.storage.getDirectory();
+          const dir = await root.getDirectoryHandle("ghanovex-vault", {
+            create: true,
+          });
+          const est = await navigator.storage.estimate().catch(() => ({}));
+          const list = $("opfs-list");
+          list.innerHTML = "";
+          let count = 0;
+          for await (const h of dir.values()) {
+            if (h.kind !== "file") continue;
+            count++;
+            const f = await h.getFile();
+            const row = document.createElement("div");
+            row.className = "panel-pad between";
+            row.style.borderTop = "1px solid #1A1A1A";
+            row.innerHTML =
+              '<div><div style="font-size:13px;font-weight:500;">' +
+              f.name.replace(/</g, "&lt;") +
+              '</div><div class="mono muted">' +
+              fmtBytes(f.size) +
+              "</div></div>";
+            const actions = document.createElement("div");
+            actions.className = "row";
+            const openBtn = document.createElement("button");
+            openBtn.className = "btn-primary";
+            openBtn.textContent = "PiP";
+            openBtn.onclick = async () => {
+              await ingestFiles([f], "OPFS Vault");
+              openPip();
+            };
+            const delBtn = document.createElement("button");
+            delBtn.className = "btn-outline";
+            delBtn.textContent = "Delete";
+            delBtn.onclick = async () => {
+              await dir.removeEntry(h.name);
+              refreshOpfs();
+            };
+            actions.append(openBtn, delBtn);
+            row.append(actions);
+            list.append(row);
+          }
+          $("opfs-status").textContent =
+            count +
+            " files · " +
+            fmtBytes(est.usage || 0) +
+            " used of " +
+            fmtBytes(est.quota || 0);
+          if (!count)
+            list.innerHTML =
+              '<div class="panel-pad muted" style="text-align:center;padding:36px;">OPFS Vault is empty. Import files to persist directly on device.</div>';
+        }
+        async function writeOpfs(file) {
+          if (!navigator.storage?.getDirectory) return;
+          const root = await navigator.storage.getDirectory();
+          const dir = await root.getDirectoryHandle("ghanovex-vault", {
+            create: true,
+          });
+          const fh = await dir.getFileHandle(
+            file.name.replace(/[/\\:*?"<>|]/g, "_"),
+            { create: true },
+          );
+          const w = await fh.createWritable();
+          for (let off = 0; off < file.size; off += CHUNK_SIZE)
+            await w.write(
+              file.slice(off, Math.min(file.size, off + CHUNK_SIZE)),
+            );
+          await w.close();
+        }
+        $("btn-opfs-import").onclick = () => $("input-opfs").click();
+        $("input-opfs").onchange = async (e) => {
+          for (const f of Array.from(e.target.files || [])) await writeOpfs(f);
+          e.target.value = "";
+          refreshOpfs();
+        };
+        $("btn-opfs-clear").onclick = async () => {
+          if (!navigator.storage?.getDirectory) return;
+          const dir = await (
+            await navigator.storage.getDirectory()
+          ).getDirectoryHandle("ghanovex-vault", { create: true });
+          for await (const h of dir.values())
+            await dir.removeEntry(h.name, { recursive: true });
+          refreshOpfs();
+        };
+        $("btn-save-opfs").onclick = async () => {
+          const it = state.items[state.index];
+          if (it?.file) {
+            await writeOpfs(it.file);
+            refreshOpfs();
+          }
+        };
+
+        // Web & Games Launcher
+        $("web-form").onsubmit = (e) => {
+          e.preventDefault();
+          let raw = $("web-url-input").value.trim();
+          if (!raw || /^(javascript|data|vbscript|file):/i.test(raw)) return;
+          if (!/^https?:\/\//i.test(raw)) raw = "https://" + raw;
+          const isGame = /game|play|itch|poki|arcade|chess|2048|unity/i.test(
+            raw,
+          );
+          const sel = $("web-orient-select").value;
+          const orient =
+            sel === "auto" ? (isGame ? "landscape" : "portrait") : sel;
+          state.items.unshift({
+            id: "w-" + Date.now(),
+            name: raw,
+            kind: isGame ? "game" : "web",
+            ext: "https",
+            size: 0,
+            webUrl: raw,
+            orient,
+          });
+          state.index = 0;
+          openPip(orient);
+        };
+        $("launch-game-preset").onclick = () => {
+          state.items.unshift({
+            id: "g-" + Date.now(),
+            name: "Monolith Rally",
+            kind: "game",
+            ext: "game",
+            size: 0,
+            srcDoc: GAME_HTML,
+            orient: "landscape",
+          });
+          state.index = 0;
+          openPip("landscape");
+        };
+        $("launch-web-preset").onclick = () => {
+          state.items.unshift({
+            id: "wp-" + Date.now(),
+            name: "Monochrome Dispatch",
+            kind: "web",
+            ext: "web",
+            size: 0,
+            srcDoc: WEB_HTML,
+            orient: "portrait",
+          });
+          state.index = 0;
+          openPip("portrait");
+        };
+
+        // Controls & Tabs
+        $("header-pip-btn").onclick = () => openPip();
+        $("btn-stage-pip").onclick = () => openPip();
+        $("btn-prev").onclick = () => stepItem(-1);
+        $("btn-next").onclick = () => stepItem(1);
+        $("btn-stage-mute").onclick = () => {
+          state.muted = !state.muted;
+          state.mutedBeforeHide = state.muted;
+          renderAll();
+        };
+        $("btn-stage-auto").onclick = () => {
+          state.autoSwitch = !state.autoSwitch;
+          renderAll();
+        };
+        document.querySelectorAll("nav button").forEach((btn) => {
+          btn.onclick = () => {
+            document
+              .querySelectorAll("nav button")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            ["library", "web", "opfs"].forEach((t) =>
+              $("tab-" + t).classList.toggle("hidden", btn.dataset.tab !== t),
+            );
+            if (btn.dataset.tab === "opfs") refreshOpfs();
+          };
+        });
+
+        renderAll();
+        refreshOpfs();
+      })();
+    </script>
+  </body>
+</html>
